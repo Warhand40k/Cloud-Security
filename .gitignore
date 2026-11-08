@@ -1,0 +1,32 @@
+# Python & environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+
+# Data & Models
+data/raw/
+data/processed/
+*.parquet
+*.csv
+*.pcap
+*.zip
+*.tar.gz
+
+# Results & outputs
+results/metrics/*
+!results/metrics/.gitkeep
+results/predictions/*
+!results/predictions/.gitkeep
+results/figures/*
+!results/figures/.gitkeep
+
+# Jupyter & checkpoints
+.ipynb_checkpoints/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+

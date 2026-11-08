@@ -1,11 +1,12 @@
 # Reproduction and Extension of mSTAMP + Kneedle for Cloud Network Anomaly Detection
 
-> Course: Cloud SRE and Security | Individual project | 21-day target (14-day compressed option)
+> Course: Cloud SRE and Security | Individual project 
 > Base paper: Al-Mazrawe & Al-Musawi (2025), *Enhancing Cloud Network Security with Innovative Time Series Analysis*, JISA. DOI: 10.5753/jisa.2025.4768
-> This document merges the original CloudSentinel plan (structure, discipline, ablation design) with four additions: a second cloud-origin dataset, an EVT threshold variant, an ARIMA-residual baseline, and SRE metrics. Items marked **[verify]** are assumptions to confirm during Day 1-2 data inspection.
 
 ---
-
+## Instructor's requirements (or their exact words)
+"Students must select a relevant research article in Cloud SRE and Security implement the proposed approach; evaluate the results; and prepare a research paper based on their work."
+---
 ## 1. Core idea in one paragraph
 
 Reproduce the paper's pipeline (multidimensional Matrix Profile via mSTAMP, with Kneedle dimension selection) as faithfully as the published description allows. Then extend it with a calibrated alert layer (adaptive thresholds and persistence filtering) and evaluate everything under one leakage-free, time-ordered protocol on two datasets, using both classification metrics and SRE-style operational metrics.
@@ -137,7 +138,7 @@ CICIoT2023 (no timestamps; index-based, as in the paper) only if both datasets a
 
 ---
 
-## 7. Technology stack
+## 7. Technology stack (I will add)
 
 Python, pandas, NumPy, SciPy, STUMPY, `kneed`, scikit-learn, statsmodels (ARIMA baseline and EVT fitting via SciPy's generalized Pareto), matplotlib/seaborn, psutil, Jupyter. Streamlit is optional and last.
 
@@ -154,7 +155,7 @@ Check the STUMPY documentation for the exact multidimensional routine before des
 
 ---
 
-## 8. Schedule (21 days)
+## 8. Schedule (ignore but keep the track in mind)
 
 ### Week 1: Understand, prepare, reproduce
 | Days | Work | Output |
