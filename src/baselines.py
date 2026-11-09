@@ -2,6 +2,7 @@
 Baseline anomaly detectors:
 1. Isolation Forest (IF)
 2. ARIMA-residual / Forecast-error detector (AR)
+3. Trivial Baselines: All-Attack, All-Normal, Random-Uniform, Random-Stratified
 """
 
 import numpy as np
@@ -9,6 +10,58 @@ import pandas as pd
 from typing import Dict, Any, Optional, List
 from sklearn.ensemble import IsolationForest
 from statsmodels.tsa.arima.model import ARIMA
+
+class AllAttackBaseline:
+    """Trivial baseline: predicts 1 (Attack) for all observations."""
+    def fit(self, X_train: np.ndarray, y_train: Optional[np.ndarray] = None):
+        return self
+
+    def score_samples(self, X: np.ndarray) -> np.ndarray:
+        return np.ones(len(X), dtype=float)
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        return np.ones(len(X), dtype=int)
+
+class AllNormalBaseline:
+    """Trivial baseline: predicts 0 (Normal) for all observations."""
+    def fit(self, X_train: np.ndarray, y_train: Optional[np.ndarray] = None):
+        return self
+
+    def score_samples(self, X: np.ndarray) -> np.ndarray:
+        return np.zeros(len(X), dtype=float)
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        return np.zeros(len(X), dtype=int)
+
+class RandomUniformBaseline:
+    """Trivial baseline: predicts 1 with uniform probability p=0.5."""
+    def __init__(self, seed: int = 42):
+        self.rng = np.random.default_rng(seed)
+
+    def fit(self, X_train: np.ndarray, y_train: Optional[np.ndarray] = None):
+        return self
+
+    def score_samples(self, X: np.ndarray) -> np.ndarray:
+        return self.rng.uniform(0.0, 1.0, size=len(X))
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        return (self.score_samples(X) >= 0.5).astype(int)
+
+class RandomStratifiedBaseline:
+    """Trivial baseline: predicts 1 with probability equal to the training split attack prevalence."""
+    def __init__(self, seed: int = 42):
+        self.rng = np.random.default_rng(seed)
+        self.prior_ = 0.5
+
+    def fit(self, X_train: np.ndarray, y_train: np.ndarray):
+        self.prior_ = float(np.mean(y_train))
+        return self
+
+    def score_samples(self, X: np.ndarray) -> np.ndarray:
+        return self.rng.uniform(0.0, 1.0, size=len(X))
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        return (self.rng.uniform(0.0, 1.0, size=len(X)) < self.prior_).astype(int)
 
 class IsolationForestBaseline:
     """

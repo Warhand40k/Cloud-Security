@@ -1,0 +1,18 @@
+{
+  "dataset": "UNSW-NB15",
+  "mode": "window",
+  "window_sec": 10,
+  "label_rule": "any_attack",
+  "batch_selection": "custom_slices",
+  "train_slice": [1200, 3200],
+  "val_slice": [3200, 4600],
+  "test_slice": [4600, 5800],
+  "subseq_len_m": 50,
+  "scaler_type": "standard",
+  "mad_rolling_window": 30,
+  "mad_c_candidates": [1.5, 2.0, 2.5, 3.0, 3.5, 4.0],
+  "evt_q": 0.90,
+  "evt_risk_candidates": [0.05, 0.01, 0.005, 0.001, 0.0005],
+  "persistence_k_candidates": [1, 2, 3, 4, 5],
+  "random_seed": 42
+}

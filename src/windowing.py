@@ -1,18 +1,22 @@
 """
 Time-window aggregation module for network flow data.
-Groups flow records into fixed chronological windows (e.g., 5s, 10s, 15s, 20s).
-Implements the paper's 10-second aggregation logic alongside operational flow statistics.
+Supports:
+1. UNSW-NB15 flow-to-window aggregation (10s intervals, mode pooling, and configurable label rules)
+2. CSE-CIC-IDS2018 flow-to-window aggregation (60s and 10s intervals, DoS telemetry aggregations)
 """
 
+import os
 import pandas as pd
 import numpy as np
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Literal
 
 PAPER_NUMERICS = ["sloss", "dur", "sbytes", "dbytes", "sttl", "dttl", "dloss"]
 PAPER_CATEGORICALS = ["state", "service"]
 
+LabelRule = Literal["any_attack", "majority", "ratio_10"]
+
 def _mode_agg(series: pd.Series):
-    """Return the most frequent value in the series (as described in the paper)."""
+    """Return the most frequent value in the series."""
     m = series.mode()
     return m.iloc[0] if not m.empty else series.iloc[0]
 
@@ -22,55 +26,136 @@ def aggregate_time_windows(
     stime_col: str = "Stime",
     label_col: str = "Label",
     attack_col: str = "attack_cat",
-    mode_only: bool = True
+    label_rule: LabelRule = "any_attack"
 ) -> pd.DataFrame:
     """
-    Aggregate flow records into discrete time windows of size `window_sec` seconds.
+    Aggregate UNSW-NB15 flow records into discrete time windows of size `window_sec` seconds.
     
     Args:
         df: DataFrame containing flow records with timestamps and labels.
-        window_sec: Window size in seconds (default 10s, as selected in paper).
+        window_sec: Window size in seconds (default 10s).
         stime_col: Start time column name.
         label_col: Binary label column name.
         attack_col: Multi-class attack category column name.
-        mode_only: If True, uses the paper's strategy (most frequent value per column).
-                   If False, appends operational summary features (flow_count, sums, rates).
-    
+        label_rule: 
+            - 'any_attack': Window is Attack (1) if at least 1 attack flow occurs.
+            - 'majority': Window is Attack (1) if >50% of flows are attacks.
+            - 'ratio_10': Window is Attack (1) if >10% of flows are attacks.
+            
     Returns:
         DataFrame where each row represents a discrete time window.
     """
     df = df.copy()
     df["window_time"] = (df[stime_col] // window_sec) * window_sec
 
-    # Prepare aggregation dictionary
     agg_dict = {}
-    
-    # 1. Paper features (mode aggregation)
     for col in PAPER_NUMERICS + PAPER_CATEGORICALS:
         if col in df.columns:
             agg_dict[col] = _mode_agg
 
-    # 2. Labels & Ground Truth
-    if label_col in df.columns:
-        agg_dict[label_col] = lambda x: int((x > 0).any())  # Any attack in window
-
     if attack_col in df.columns:
         agg_dict[attack_col] = _mode_agg
 
-    # Groupby window_time
     grouped = df.groupby("window_time", as_index=False)
     windowed_df = grouped.agg(agg_dict)
 
-    # Additional operational/SRE telemetry metadata
+    # Compute operational telemetry counts
     metadata = grouped.agg(
         flow_count=(stime_col, "count"),
         attack_flow_count=(label_col, "sum") if label_col in df.columns else (stime_col, "count")
     )
     windowed_df["flow_count"] = metadata["flow_count"]
     if label_col in df.columns:
+        windowed_df["attack_flow_count"] = metadata["attack_flow_count"]
         windowed_df["attack_ratio"] = metadata["attack_flow_count"] / metadata["flow_count"]
+        
+        # Ground truth window labels under different decision rules
+        windowed_df["Label_any"] = (windowed_df["attack_flow_count"] > 0).astype(int)
+        windowed_df["Label_majority"] = (windowed_df["attack_ratio"] > 0.5).astype(int)
+        windowed_df["Label_ratio10"] = (windowed_df["attack_ratio"] >= 0.10).astype(int)
 
-    # Sort strictly chronologically
+        if label_rule == "any_attack":
+            windowed_df[label_col] = windowed_df["Label_any"]
+        elif label_rule == "majority":
+            windowed_df[label_col] = windowed_df["Label_majority"]
+        elif label_rule == "ratio_10":
+            windowed_df[label_col] = windowed_df["Label_ratio10"]
+        else:
+            raise ValueError(f"Unknown label_rule: {label_rule}")
+
     windowed_df = windowed_df.sort_values(by="window_time").reset_index(drop=True)
     return windowed_df
 
+def aggregate_csecicids2018_windows(
+    csv_path: str,
+    window_sec: int = 60,
+    label_rule: LabelRule = "any_attack"
+) -> pd.DataFrame:
+    """
+    Aggregate CSE-CIC-IDS2018 flow records into fixed time windows.
+    Computes cloud network SRE telemetry: rates, volumes, flag counts, and port diversity.
+    """
+    print(f"Reading CSE-CIC-IDS2018 from {csv_path}...")
+    df = pd.read_csv(csv_path, low_memory=False)
+    
+    # Prune embedded header rows if any
+    header_mask = df["Timestamp"] == "Timestamp"
+    if header_mask.any():
+        df = df[~header_mask].copy().reset_index(drop=True)
+
+    # Parse timestamps
+    df["dt"] = pd.to_datetime(df["Timestamp"], format="%d/%m/%Y %H:%M:%S", errors="coerce")
+    df = df.dropna(subset=["dt"]).copy()
+    
+    # Second epoch
+    epoch_sec = (df["dt"] - pd.Timestamp("1970-01-01")) // pd.Timedelta("1s")
+    df["window_time"] = (epoch_sec // window_sec) * window_sec
+
+    # Coerce numerics
+    numeric_cols = [
+        "Flow Duration", "Tot Fwd Pkts", "Tot Bwd Pkts", "TotLen Fwd Pkts", "TotLen Bwd Pkts",
+        "Flow Byts/s", "Flow Pkts/s", "SYN Flag Cnt", "RST Flag Cnt", "ACK Flag Cnt", "Pkt Len Mean"
+    ]
+    for c in numeric_cols:
+        if c in df.columns:
+            df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0.0)
+
+    # Binary label (0 = Benign, 1 = Attack)
+    df["is_attack"] = (df["Label"] != "Benign").astype(int)
+
+    # Window aggregations
+    grouped = df.groupby("window_time", as_index=False)
+    
+    win_features = grouped.agg(
+        flow_count=("is_attack", "count"),
+        attack_count=("is_attack", "sum"),
+        tot_fwd_pkts=("Tot Fwd Pkts", "sum"),
+        tot_bwd_pkts=("Tot Bwd Pkts", "sum"),
+        tot_fwd_bytes=("TotLen Fwd Pkts", "sum"),
+        tot_bwd_bytes=("TotLen Bwd Pkts", "sum"),
+        flow_duration_mean=("Flow Duration", "mean"),
+        flow_byts_s_mean=("Flow Byts/s", "mean"),
+        flow_pkts_s_mean=("Flow Pkts/s", "mean"),
+        syn_flags_total=("SYN Flag Cnt", "sum"),
+        rst_flags_total=("RST Flag Cnt", "sum"),
+        ack_flags_total=("ACK Flag Cnt", "sum"),
+        pkt_len_mean=("Pkt Len Mean", "mean"),
+        unique_dst_ports=("Dst Port", "nunique")
+    )
+
+    win_features["attack_ratio"] = win_features["attack_count"] / win_features["flow_count"]
+    win_features["Label_any"] = (win_features["attack_count"] > 0).astype(int)
+    win_features["Label_majority"] = (win_features["attack_ratio"] > 0.5).astype(int)
+    win_features["Label_ratio10"] = (win_features["attack_ratio"] >= 0.10).astype(int)
+
+    if label_rule == "any_attack":
+        win_features["Label"] = win_features["Label_any"]
+    elif label_rule == "majority":
+        win_features["Label"] = win_features["Label_majority"]
+    elif label_rule == "ratio_10":
+        win_features["Label"] = win_features["Label_ratio10"]
+    else:
+        raise ValueError(f"Unknown label_rule: {label_rule}")
+
+    win_features = win_features.sort_values(by="window_time").reset_index(drop=True)
+    return win_features

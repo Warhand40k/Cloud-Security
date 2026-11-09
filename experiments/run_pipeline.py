@@ -1,8 +1,14 @@
 """
-End-to-end experiment pipeline:
-Executes Config A, B1, B2, C, Isolation Forest, and ARIMA-residual baselines
-under a unified, strictly chronological, zero-leakage evaluation protocol.
-Supports both 'flow' level (per-packet/flow records) and 'window' level (10-second aggregated windows).
+Unified end-to-end experiment pipeline:
+Executes:
+- Config A (Base reproduction: mSTAMP + Kneedle)
+- Config B1 (Adaptive MAD threshold)
+- Config B2 (Adaptive EVT Peaks-Over-Threshold)
+- Config C (Persistence Filter k-consecutive)
+- Machine Learning Baselines: Isolation Forest (IF), ARIMA-Residual (AR)
+- Trivial Baselines: All-Attack, All-Normal, Random-Uniform, Random-Stratified
+Supports both UNSW-NB15 (flow and window modes) and CSE-CIC-IDS2018 (AWS cloud telemetry).
+Fully reproducible from saved config files in configs/.
 """
 
 import os
@@ -19,80 +25,182 @@ import seaborn as sns
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.preprocessing import load_and_sort_raw_unsw, split_chronological, UNSWPreprocessor
-from src.windowing import aggregate_time_windows
+from src.windowing import aggregate_time_windows, aggregate_csecicids2018_windows
 from src.matrix_profile import compute_multidimensional_mp
 from src.kneedle import find_knee_dimension
 from src.anomaly_scoring import compute_point_anomaly_scores
 from src.adaptive_threshold import MADThreshold, EVTThreshold
 from src.persistence_filter import PersistenceFilter
-from src.baselines import IsolationForestBaseline, ARIMAResidualBaseline
+from src.baselines import (
+    IsolationForestBaseline, ARIMAResidualBaseline,
+    AllAttackBaseline, AllNormalBaseline,
+    RandomUniformBaseline, RandomStratifiedBaseline
+)
 from src.evaluation import compute_classification_metrics, compute_sre_operational_metrics, ResourceProfiler
+from sklearn.preprocessing import StandardScaler
 
 OUTPUT_METRICS_DIR = "results/metrics"
 OUTPUT_FIGURES_DIR = "results/figures"
 PROCESSED_DATA_DIR = "data/processed"
 
-def run_experiments(
-    mode: str = "flow",
-    n_samples: int = 8000,
-    window_sec: int = 10,
-    subseq_len_m: int = 50,
-    seed: int = 42
-):
+def run_from_config(config_path: str):
+    with open(config_path, "r") as f:
+        config = json.load(f)
+    
+    config_name = os.path.splitext(os.path.basename(config_path))[0]
+    return run_pipeline(config, config_name)
+
+def run_pipeline(config: Dict[str, Any], config_name: str):
     os.makedirs(OUTPUT_METRICS_DIR, exist_ok=True)
     os.makedirs(OUTPUT_FIGURES_DIR, exist_ok=True)
     os.makedirs(PROCESSED_DATA_DIR, exist_ok=True)
 
+    dataset_name = config.get("dataset", "UNSW-NB15")
+    mode = config.get("mode", "window")
+    subseq_len_m = config.get("subseq_len_m", 30)
+    seed = config.get("random_seed", 42)
+    np.random.seed(seed)
+
     print("=" * 80)
-    print(f"RUNNING EXPERIMENT PIPELINE [MODE: {mode.upper()}]")
-    print(f"Samples: {n_samples:,d} | Matrix Profile subsequence length m: {subseq_len_m}")
+    print(f"RUNNING EXPERIMENT: {config_name.upper()} [DATASET: {dataset_name}]")
+    print(f"Mode: {mode} | Window Length m: {subseq_len_m} | Seed: {seed}")
     print("=" * 80)
 
-    # 1. Load Data
-    if mode == "window":
-        processed_parquet = os.path.join(PROCESSED_DATA_DIR, f"unsw_nb15_{window_sec}s_windows.parquet")
-        if os.path.exists(processed_parquet):
-            print(f"Loading existing processed windowed data from {processed_parquet}...")
-            df_full = pd.read_parquet(processed_parquet)
-        else:
-            print("Loading raw flows and sorting chronologically...")
-            df_raw = load_and_sort_raw_unsw(file_indices=[1, 2, 3, 4])
-            print(f"Aggregating {len(df_raw):,d} flows into {window_sec}s windows...")
-            df_full = aggregate_time_windows(df_raw, window_sec=window_sec)
-            df_full.to_parquet(processed_parquet)
+    # 1. Dataset Loading and Windowing
+    if dataset_name == "UNSW-NB15":
+        window_sec = config.get("window_sec", 10)
+        label_rule = config.get("label_rule", "any_attack")
+        batch_selection = config.get("batch_selection", "batch1_active")
         
-        # Take representative slice containing both normal and attack periods
-        df_eval = df_full.iloc[:n_samples].copy().reset_index(drop=True)
+        if mode == "window":
+            processed_parquet = os.path.join(PROCESSED_DATA_DIR, f"unsw_nb15_{window_sec}s_{label_rule}.parquet")
+            if os.path.exists(processed_parquet):
+                print(f"Loading cached windowed dataset from {processed_parquet}...")
+                df_win = pd.read_parquet(processed_parquet)
+            else:
+                print("Loading raw UNSW flows and sorting chronologically...")
+                df_raw = load_and_sort_raw_unsw(file_indices=[1, 2, 3, 4])
+                print(f"Aggregating {len(df_raw):,d} flows into {window_sec}s windows (rule={label_rule})...")
+                df_win = aggregate_time_windows(df_raw, window_sec=window_sec, label_rule=label_rule)
+                df_win.to_parquet(processed_parquet)
+
+            time_col = "window_time"
+            step_sec = float(window_sec)
+
+            # Handle batch gap & partition strategy
+            if "train_slice" in config and "val_slice" in config and "test_slice" in config:
+                tr_s = config["train_slice"]
+                val_s = config["val_slice"]
+                te_s = config["test_slice"]
+                train_df = df_win.iloc[tr_s[0]:tr_s[1]].copy().reset_index(drop=True)
+                val_df = df_win.iloc[val_s[0]:val_s[1]].copy().reset_index(drop=True)
+                test_df = df_win.iloc[te_s[0]:te_s[1]].copy().reset_index(drop=True)
+                df_eval = pd.concat([train_df, val_df, test_df], ignore_index=True)
+            elif batch_selection == "batch1_active":
+                # Active transition period of Batch 1: first 2,000 windows (attacks + normal baseline)
+                n_samples = config.get("n_samples", 2000)
+                df_eval = df_win.iloc[:n_samples].copy().reset_index(drop=True)
+                train_df, val_df, test_df = split_chronological(
+                    df_eval,
+                    train_frac=config.get("train_frac", 0.60),
+                    val_frac=config.get("val_frac", 0.20),
+                    test_frac=config.get("test_frac", 0.20)
+                )
+
+            elif batch_selection == "cross_batch_benign":
+                # Cross-batch: Train on Batch 1 pure normal baseline, Val on Batch 1/2 transition, Test on Batch 2
+                train_df = df_win.iloc[1000:3000].copy().reset_index(drop=True) # Pure normal
+                val_df = df_win.iloc[3000:4500].copy().reset_index(drop=True)   # End Batch 1
+                test_df = df_win.iloc[4500:6500].copy().reset_index(drop=True)  # Batch 2 attacks
+                df_eval = pd.concat([train_df, val_df, test_df], ignore_index=True)
+
+            else:
+                n_samples = config.get("n_samples", len(df_win))
+                df_eval = df_win.iloc[:n_samples].copy().reset_index(drop=True)
+                train_df, val_df, test_df = split_chronological(df_eval, 0.6, 0.2, 0.2)
+
+            feature_cols = ["sloss", "state", "dur", "sbytes", "dbytes", "sttl", "dttl", "dloss", "service"]
+            preprocessor = UNSWPreprocessor(scaler_type=config.get("scaler_type", "standard"))
+            X_train, y_train = preprocessor.fit_transform(train_df)
+            X_val, y_val = preprocessor.transform(val_df)
+            X_test, y_test = preprocessor.transform(test_df)
+
+        elif mode == "flow":
+            n_samples = config.get("n_samples", 8000)
+            print(f"Loading raw sorted flows ({n_samples:,d} flows)...")
+            df_eval = load_and_sort_raw_unsw(file_indices=[1], nrows=n_samples)
+            time_col = "Stime"
+            step_sec = 1.0
+
+            train_df, val_df, test_df = split_chronological(
+                df_eval,
+                train_frac=config.get("train_frac", 0.60),
+                val_frac=config.get("val_frac", 0.20),
+                test_frac=config.get("test_frac", 0.20)
+            )
+
+            preprocessor = UNSWPreprocessor(scaler_type=config.get("scaler_type", "standard"))
+            X_train, y_train = preprocessor.fit_transform(train_df)
+            X_val, y_val = preprocessor.transform(val_df)
+            X_test, y_test = preprocessor.transform(test_df)
+
+    elif dataset_name == "CSE-CIC-IDS2018":
+        csv_file = config.get("csv_file", "data/raw/Friday-16-02-2018_TrafficForML_CICFlowMeter.csv")
+        window_sec = config.get("window_sec", 60)
+        label_rule = config.get("label_rule", "any_attack")
+
+        processed_parquet = os.path.join(PROCESSED_DATA_DIR, f"csecicids2018_{window_sec}s_{label_rule}.parquet")
+        if os.path.exists(processed_parquet):
+            print(f"Loading cached windowed dataset from {processed_parquet}...")
+            df_win = pd.read_parquet(processed_parquet)
+        else:
+            df_win = aggregate_csecicids2018_windows(csv_file, window_sec=window_sec, label_rule=label_rule)
+            df_win.to_parquet(processed_parquet)
+
+        df_eval = df_win.copy()
         time_col = "window_time"
         step_sec = float(window_sec)
 
-    elif mode == "flow":
-        print(f"Loading raw sorted flows (taking first {n_samples:,d} flows)...")
-        # Load from file 1 which contains initial contiguous simulation session
-        df_eval = load_and_sort_raw_unsw(file_indices=[1], nrows=n_samples)
-        time_col = "Stime"
-        step_sec = 1.0
+        if "train_slice" in config and "val_slice" in config and "test_slice" in config:
+            tr_s = config["train_slice"]
+            val_s = config["val_slice"]
+            te_s = config["test_slice"]
+            train_df = df_win.iloc[tr_s[0]:tr_s[1]].copy().reset_index(drop=True)
+            val_df = df_win.iloc[val_s[0]:val_s[1]].copy().reset_index(drop=True)
+            test_df = df_win.iloc[te_s[0]:te_s[1]].copy().reset_index(drop=True)
+            df_eval = pd.concat([train_df, val_df, test_df], ignore_index=True)
+        else:
+            train_df, val_df, test_df = split_chronological(
+                df_eval,
+                train_frac=config.get("train_frac", 0.50),
+                val_frac=config.get("val_frac", 0.25),
+                test_frac=config.get("test_frac", 0.25)
+            )
+
+        csec_features = [
+            "flow_count", "tot_fwd_pkts", "tot_bwd_pkts", "tot_fwd_bytes", "tot_bwd_bytes",
+            "flow_duration_mean", "flow_byts_s_mean", "flow_pkts_s_mean",
+            "syn_flags_total", "rst_flags_total", "ack_flags_total", "pkt_len_mean", "unique_dst_ports"
+        ]
+        scaler = StandardScaler()
+        X_train = scaler.fit_transform(train_df[csec_features].fillna(0.0).values)
+        X_val = scaler.transform(val_df[csec_features].fillna(0.0).values)
+        X_test = scaler.transform(test_df[csec_features].fillna(0.0).values)
+        
+        y_train = train_df["Label"].values.astype(int)
+        y_val = val_df["Label"].values.astype(int)
+        y_test = test_df["Label"].values.astype(int)
+
     else:
-        raise ValueError(f"Unknown mode: {mode}")
+        raise ValueError(f"Unsupported dataset: {dataset_name}")
 
     total_instances = len(df_eval)
-    n_attacks = int(df_eval["Label"].sum())
-    attack_ratio = float(n_attacks / total_instances)
-    print(f"Evaluation set: {total_instances:,d} instances | Attacks: {n_attacks:,d} ({attack_ratio*100:.2f}%)")
+    print(f"\nPartitions:")
+    print(f"  Train: {len(train_df):5d} | Attacks: {y_train.sum():4d} ({y_train.mean()*100:5.2f}%)")
+    print(f"  Val:   {len(val_df):5d} | Attacks: {y_val.sum():4d} ({y_val.mean()*100:5.2f}%)")
+    print(f"  Test:  {len(test_df):5d} | Attacks: {y_test.sum():4d} ({y_test.mean()*100:5.2f}%)")
 
-    # 2. Chronological Split (60% Train, 20% Val, 20% Test)
-    train_df, val_df, test_df = split_chronological(df_eval, train_frac=0.60, val_frac=0.20, test_frac=0.20)
-    print(f"Chronological Splits:")
-    print(f"  Train: {len(train_df):,d} | Attacks: {train_df['Label'].sum():,d} ({train_df['Label'].mean()*100:.2f}%)")
-    print(f"  Val:   {len(val_df):,d} | Attacks: {val_df['Label'].sum():,d} ({val_df['Label'].mean()*100:.2f}%)")
-    print(f"  Test:  {len(test_df):,d} | Attacks: {test_df['Label'].sum():,d} ({test_df['Label'].mean()*100:.2f}%)")
-
-    # 3. Fit Preprocessor on Train Only
-    preprocessor = UNSWPreprocessor(scaler_type="standard")
-    X_train, y_train = preprocessor.fit_transform(train_df)
-    X_val, y_val = preprocessor.transform(val_df)
-    X_test, y_test = preprocessor.transform(test_df)
-
+    # Full array for Matrix Profile stream
     X_full = np.vstack([X_train, X_val, X_test])
     timestamps_full = df_eval[time_col].values
 
@@ -100,10 +208,43 @@ def run_experiments(
     n_val = len(val_df)
     val_slice = slice(n_train, n_train + n_val)
     test_slice = slice(n_train + n_val, total_instances)
-
     timestamps_test = timestamps_full[test_slice]
 
     results_table = []
+
+    # =========================================================================
+    # TRIVIAL BASELINES
+    # =========================================================================
+    print("\n--- Running Trivial Baselines ---")
+    trivial_models = [
+        ("Trivial: All-Attack", AllAttackBaseline()),
+        ("Trivial: All-Normal", AllNormalBaseline()),
+        ("Trivial: Random Uniform", RandomUniformBaseline(seed=seed)),
+        ("Trivial: Random Stratified", RandomStratifiedBaseline(seed=seed))
+    ]
+
+    for name, model in trivial_models:
+        model.fit(X_train, y_train)
+        pred_te = model.predict(X_test)
+        scores_te = model.score_samples(X_test)
+        cls_m = compute_classification_metrics(y_test, pred_te, scores_te)
+        sre_m = compute_sre_operational_metrics(y_test, pred_te, timestamps_test, default_step_sec=step_sec)
+        results_table.append({
+            "Configuration": name,
+            "Type": "Trivial Baseline",
+            "Accuracy": cls_m["accuracy"],
+            "Precision": cls_m["precision"],
+            "Recall": cls_m["recall"],
+            "F1": cls_m["f1"],
+            "FPR": cls_m["fpr"],
+            "PR_AUC": cls_m["pr_auc"],
+            "Total_Alerts": sre_m["total_alerts"],
+            "False_Alarms_Per_Day": sre_m["false_alarms_per_day"],
+            "Episode_Recall": sre_m["episode_recall"],
+            "MTTD_Delay_Sec": sre_m["mean_delay_sec"],
+            "Runtime_Sec": 0.001,
+            "Peak_RAM_MB": 0.0
+        })
 
     # =========================================================================
     # CONFIG A: Base Reproduction (mSTAMP + Kneedle)
@@ -120,7 +261,7 @@ def run_experiments(
     scores_val = scores_full[val_slice]
     scores_test = scores_full[test_slice]
 
-    # Baseline validation threshold search (finding optimal threshold on val)
+    # Baseline threshold calibrated on validation split
     val_percentiles = np.linspace(80, 99.8, 100)
     best_thresh_a = float(np.median(scores_val))
     best_f1_val_a = -1.0
@@ -154,18 +295,20 @@ def run_experiments(
     })
 
     # =========================================================================
-    # CONFIG B1: Extension - Rolling MAD Adaptive Threshold
+    # CONFIG B1: Adaptive Threshold (Rolling MAD)
     # =========================================================================
     print("\n--- Running Config B1: Adaptive Threshold (Rolling MAD) ---")
     with ResourceProfiler() as prof_b1:
         val_normal_scores = scores_val[y_val == 0]
-        if len(val_normal_scores) < 10:
+        if len(val_normal_scores) < 5:
             val_normal_scores = scores_val
 
+        roll_win = config.get("mad_rolling_window", 30)
+        c_candidates = config.get("mad_c_candidates", [1.5, 2.0, 2.5, 3.0, 3.5, 4.0])
         best_c = 3.0
         best_f1_b1 = -1.0
-        for c_cand in [1.5, 2.0, 2.5, 3.0, 3.5, 4.0]:
-            mad_cand = MADThreshold(c=c_cand, rolling_window=50)
+        for c_cand in c_candidates:
+            mad_cand = MADThreshold(c=c_cand, rolling_window=roll_win)
             mad_cand.fit(val_normal_scores)
             pred_v = mad_cand.predict(scores_val)
             f1_v = compute_classification_metrics(y_val, pred_v)["f1"]
@@ -173,7 +316,7 @@ def run_experiments(
                 best_f1_b1 = f1_v
                 best_c = c_cand
 
-        mad_model = MADThreshold(c=best_c, rolling_window=50)
+        mad_model = MADThreshold(c=best_c, rolling_window=roll_win)
         mad_model.fit(val_normal_scores)
         pred_test_b1 = mad_model.predict(scores_test)
 
@@ -198,18 +341,20 @@ def run_experiments(
     })
 
     # =========================================================================
-    # CONFIG B2: Extension - EVT Peaks-Over-Threshold (POT)
+    # CONFIG B2: Adaptive Threshold (EVT POT)
     # =========================================================================
     print("\n--- Running Config B2: Adaptive Threshold (EVT POT) ---")
     with ResourceProfiler() as prof_b2:
         val_normal_scores = scores_val[y_val == 0]
-        if len(val_normal_scores) < 10:
+        if len(val_normal_scores) < 5:
             val_normal_scores = scores_val
 
+        evt_q = config.get("evt_q", 0.90)
+        risk_candidates = config.get("evt_risk_candidates", [0.05, 0.01, 0.005, 0.001, 0.0005])
         best_risk = 1e-3
         best_f1_b2 = -1.0
-        for r_cand in [5e-2, 1e-2, 5e-3, 1e-3, 5e-4]:
-            evt_cand = EVTThreshold(q=0.90, risk_p=r_cand)
+        for r_cand in risk_candidates:
+            evt_cand = EVTThreshold(q=evt_q, risk_p=r_cand)
             evt_cand.fit(val_normal_scores)
             pred_v = evt_cand.predict(scores_val)
             f1_v = compute_classification_metrics(y_val, pred_v)["f1"]
@@ -217,7 +362,7 @@ def run_experiments(
                 best_f1_b2 = f1_v
                 best_risk = r_cand
 
-        evt_model = EVTThreshold(q=0.90, risk_p=best_risk)
+        evt_model = EVTThreshold(q=evt_q, risk_p=best_risk)
         evt_model.fit(val_normal_scores)
         pred_test_b2 = evt_model.predict(scores_test)
 
@@ -242,17 +387,18 @@ def run_experiments(
     })
 
     # =========================================================================
-    # CONFIG C: Extension - Persistence Filter (k consecutive anomalies)
+    # CONFIG C: Persistence Filter (k consecutive)
     # =========================================================================
-    print("\n--- Running Config C: Persistence Filter (k consecutive) ---")
+    print("\n--- Running Config C: Persistence Filter ---")
     with ResourceProfiler() as prof_c:
         base_val_alarms = mad_model.predict(scores_val) if best_f1_b1 >= best_f1_b2 else evt_model.predict(scores_val)
         base_test_alarms = pred_test_b1 if best_f1_b1 >= best_f1_b2 else pred_test_b2
         base_name = "MAD" if best_f1_b1 >= best_f1_b2 else "EVT"
 
-        best_k = 2
+        k_candidates = config.get("persistence_k_candidates", [1, 2, 3, 4, 5])
+        best_k = 1
         best_f1_c = -1.0
-        for k_cand in [1, 2, 3, 4, 5]:
+        for k_cand in k_candidates:
             pf_cand = PersistenceFilter(k=k_cand)
             filtered_val = pf_cand.filter(base_val_alarms)
             f1_v = compute_classification_metrics(y_val, filtered_val)["f1"]
@@ -268,7 +414,7 @@ def run_experiments(
     sre_c = compute_sre_operational_metrics(y_test, pred_test_c, timestamps_test, default_step_sec=step_sec)
 
     results_table.append({
-        "Configuration": f"Config C ({base_name} + Persistence k={best_k})",
+        "Configuration": f"Config C ({base_name} + Persist k={best_k})",
         "Type": "Our Extension",
         "Accuracy": cls_c["accuracy"],
         "Precision": cls_c["precision"],
@@ -285,9 +431,9 @@ def run_experiments(
     })
 
     # =========================================================================
-    # BASELINE 1: Isolation Forest
+    # ML BASELINES: Isolation Forest & ARIMA Residual
     # =========================================================================
-    print("\n--- Running Baseline 1: Isolation Forest ---")
+    print("\n--- Running ML Baselines (Isolation Forest & ARIMA) ---")
     with ResourceProfiler() as prof_if:
         if_model = IsolationForestBaseline(n_estimators=100, random_state=seed)
         if_model.fit(X_train)
@@ -300,7 +446,7 @@ def run_experiments(
 
     results_table.append({
         "Configuration": "Baseline: Isolation Forest",
-        "Type": "Baseline",
+        "Type": "ML Baseline",
         "Accuracy": cls_if["accuracy"],
         "Precision": cls_if["precision"],
         "Recall": cls_if["recall"],
@@ -315,10 +461,6 @@ def run_experiments(
         "Peak_RAM_MB": prof_if.peak_mem_mb
     })
 
-    # =========================================================================
-    # BASELINE 2: ARIMA Residual
-    # =========================================================================
-    print("\n--- Running Baseline 2: ARIMA-Residual Detector ---")
     with ResourceProfiler() as prof_ar:
         ar_model = ARIMAResidualBaseline(order=(1, 0, 1))
         ar_model.fit(X_train)
@@ -331,7 +473,7 @@ def run_experiments(
 
     results_table.append({
         "Configuration": "Baseline: ARIMA Residual",
-        "Type": "Baseline",
+        "Type": "ML Baseline",
         "Accuracy": cls_ar["accuracy"],
         "Precision": cls_ar["precision"],
         "Recall": cls_ar["recall"],
@@ -347,24 +489,27 @@ def run_experiments(
     })
 
     # =========================================================================
-    # Output Results
+    # Export Tables & Config Artifacts
     # =========================================================================
     results_df = pd.DataFrame(results_table)
-    suffix = f"_{mode}"
-    csv_path = os.path.join(OUTPUT_METRICS_DIR, f"comparison_table{suffix}.csv")
-    json_path = os.path.join(OUTPUT_METRICS_DIR, f"comparison_table{suffix}.json")
+    csv_path = os.path.join(OUTPUT_METRICS_DIR, f"{config_name}_results.csv")
+    json_path = os.path.join(OUTPUT_METRICS_DIR, f"{config_name}_results.json")
+    saved_cfg_path = os.path.join(OUTPUT_METRICS_DIR, f"{config_name}_config.json")
+
     results_df.to_csv(csv_path, index=False)
     results_df.to_json(json_path, orient="records", indent=2)
+    with open(saved_cfg_path, "w") as f:
+        json.dump(config, f, indent=2)
 
     print("\n" + "=" * 80)
-    print(f"EXPERIMENTAL EVALUATION RESULTS [{mode.upper()} MODE] (TEST SET)")
+    print(f"FINAL TEST SET RESULTS: {config_name.upper()}")
     print("=" * 80)
     print(results_df[[
-        "Configuration", "F1", "Precision", "Recall", "FPR", "PR_AUC", "Total_Alerts", "False_Alarms_Per_Day", "MTTD_Delay_Sec"
+        "Configuration", "Type", "F1", "Precision", "Recall", "FPR", "PR_AUC", "Total_Alerts", "False_Alarms_Per_Day", "MTTD_Delay_Sec"
     ]].to_string(index=False))
 
-    # Generate Figures
-    fig, ax1 = plt.subplots(figsize=(11, 6))
+    # Generate Publication Figure
+    fig, ax1 = plt.subplots(figsize=(12, 6))
     x_positions = np.arange(len(results_df))
     width = 0.35
 
@@ -373,7 +518,7 @@ def run_experiments(
     ax1.set_ylabel("Score", fontsize=12)
     ax1.set_ylim(0, 1.05)
     ax1.set_xticks(x_positions)
-    ax1.set_xticklabels(results_df["Configuration"], rotation=22, ha="right", fontsize=9.5)
+    ax1.set_xticklabels(results_df["Configuration"], rotation=28, ha="right", fontsize=9)
     ax1.legend(loc="upper left")
 
     ax2 = ax1.twinx()
@@ -381,34 +526,20 @@ def run_experiments(
     ax2.set_ylabel("Total Alert Volume", color="#d62728", fontsize=12)
     ax2.grid(False)
 
-    plt.title(f"Ablation & Baseline Comparison [{mode.capitalize()} Level]: Detection vs Alert Volume", fontsize=13, fontweight="bold")
+    plt.title(f"Ablation, ML & Trivial Baselines: {config_name}", fontsize=13, fontweight="bold")
     fig.tight_layout()
-    fig_path1 = os.path.join(OUTPUT_FIGURES_DIR, f"comparison_f1_alerts{suffix}.png")
+    fig_path1 = os.path.join(OUTPUT_FIGURES_DIR, f"{config_name}_f1_alerts.png")
     plt.savefig(fig_path1, dpi=300)
     plt.close()
-    print(f"\nSaved comparison chart to {fig_path1}")
 
-    # Figure 2: Kneedle Dimension Curve
-    fig, ax = plt.subplots(figsize=(8, 5))
-    ax.plot(knee_info["x"], knee_info["y"], marker="s", color="#1f77b4", linewidth=2, label="Max Profile Value")
-    ax.axvline(knee_dim, color="crimson", linestyle="--", linewidth=2, label=f"Selected Knee (Dim = {knee_dim})")
-    ax.scatter([knee_dim], [knee_info["y"][knee_dim - 1]], color="crimson", s=120, zorder=5)
-    ax.set_xlabel("Number of Selected Dimensions (Subspace Size)", fontsize=11)
-    ax.set_ylabel("Max Distance Profile", fontsize=11)
-    ax.set_title(f"mSTAMP Dimension Selection via Kneedle [{mode.capitalize()} Level]", fontsize=12, fontweight="bold")
-    ax.legend()
-    fig_path2 = os.path.join(OUTPUT_FIGURES_DIR, f"kneedle_curve{suffix}.png")
-    plt.savefig(fig_path2, dpi=300)
-    plt.close()
-    print(f"Saved Kneedle curve to {fig_path2}")
-
+    print(f"\nSaved metrics table to: {csv_path}")
+    print(f"Saved figure to: {fig_path1}")
+    print(f"Saved reproducible config to: {saved_cfg_path}")
     return results_df
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", type=str, default="flow", choices=["flow", "window"])
-    parser.add_argument("--samples", type=int, default=8000)
-    parser.add_argument("--subseq-len", type=int, default=50)
+    parser.add_argument("--config", type=str, required=True, help="Path to config JSON")
     args = parser.parse_args()
 
-    run_experiments(mode=args.mode, n_samples=args.samples, subseq_len_m=args.subseq_len)
+    run_from_config(args.config)

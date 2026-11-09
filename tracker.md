@@ -15,16 +15,17 @@
 | **Phase 2** | Preprocessing, Feature Extraction & Chronological Splitting | ✅ Completed | 100% |
 | **Phase 3** | Config A: Base Reproduction (mSTAMP + Kneedle) | ✅ Completed | 100% |
 | **Phase 4** | Config B1/B2/C: Extensions (MAD, EVT, Persistence Filter) | ✅ Completed | 100% |
-| **Phase 5** | Baselines (Isolation Forest, ARIMA-Residual Detector) | ✅ Completed | 100% |
-| **Phase 6** | Comprehensive Evaluation (ML, SRE & Resource Metrics) | ✅ Completed | 100% |
-| **Phase 7** | Research Paper Draft & Presentation Deliverables | 🔄 In Progress | 25% |
+| **Phase 4b** | Dataset 2: CSE-CIC-IDS2018 (AWS Cloud Telemetry & Flooding) | ✅ Completed | 100% |
+| **Phase 5** | Baselines (Isolation Forest, ARIMA, Trivial Baselines) | ✅ Completed | 100% |
+| **Phase 6** | Comprehensive Evaluation (ML, SRE, Configs & Gap Decision) | ✅ Completed | 100% |
+| **Phase 7** | Research Paper Draft & Presentation Deliverables | 🔄 In Progress | 30% |
 
 ---
 
 ## Detailed Task Checklist
 
 ### Phase 1: Environment, Scaffolding & Raw Data Verification
-- [x] Create core repository directory structure (`src/`, `data/raw/`, `data/processed/`, `experiments/`, `notebooks/`, `results/`)
+- [x] Create core repository directory structure (`src/`, `data/raw/`, `data/processed/`, `experiments/`, `notebooks/`, `results/`, `configs/`)
 - [x] Configure `.gitignore` to protect raw/processed data and results
 - [x] Set up Python 3.12 virtual environment (`.venv`) and core dependencies (`stumpy`, `kneed`, `pandas`, `scipy`, `statsmodels`, `scikit-learn`, `matplotlib`, `seaborn`, `psutil`)
 - [x] Export pinned environment to `requirements.txt`
@@ -46,9 +47,15 @@
   - [x] Missing marker handling (`#DIV/0!`, `?`, `-`) with train-fitted statistics
   - [x] Train/validation/test chronological partition (no shuffling, zero leakage: 60% / 20% / 20%)
 - [x] Build time-windowing aggregation in `src/windowing.py`:
-  - [x] Window-based grouping (10s intervals as in base paper)
+  - [x] Window-based grouping (10s intervals as in base paper; configurable window lengths)
   - [x] Mode aggregation for categoricals and ground truth labeling (`any_attack` and `attack_ratio`)
   - [x] Export processed dataset to Parquet (`data/processed/unsw_nb15_10s_windows.parquet`)
+- [x] **UNSW Window Label Definition & Batch Gap Decision:**
+  - [x] Compared `any_attack` vs. `majority_attack` (>0.5 ratio) on validation data; fixed `any_attack` as primary security ground-truth rule (strict majority masks 98.3% of attack windows).
+  - [x] Formulated batch gap strategy:
+    - Flow-level contiguous evaluation: 8,000 flows from Batch 1 (rare anomaly setting: 3.8% train, 6.7% val, 11.7% test).
+    - Window-level cross-batch evaluation: Train on pure benign baseline [1200:3200], Val on transition [3200:4600], Test on held-out attack campaign [4600:5800].
+  - [x] Implemented trivial baselines (All-Attack, All-Normal, Random-Uniform, Random-Stratified) and recomputed results across all configurations.
 
 ---
 
@@ -70,33 +77,46 @@
 
 ---
 
-### Phase 5: Baselines Implementation
-- [x] Implement Isolation Forest baseline in `src/baselines.py` (fitted on train, validation-calibrated threshold)
-- [x] Implement ARIMA-residual / CUSUM baseline in `src/baselines.py` (univariate one-step forecast errors aggregated across features)
+### Phase 4b: Dataset 2: CSE-CIC-IDS2018 (AWS Cloud Telemetry & Flooding)
+- [x] Selected representative day from AWS S3 Open Data: `Friday-16-02-2018` (DoS-Hulk & DoS-SlowHTTPTest against AWS EC2 instances, 318.26 MB)
+- [x] Downloaded raw slice into `data/raw/Friday-16-02-2018_TrafficForML_CICFlowMeter.csv`
+- [x] Day-1 verification report compiled in `docs/day1_csecicids2018_report.md`:
+  - [x] Verified timestamps (11.96 continuous hours, 0 unparseable values, sorted chronologically)
+  - [x] Checked attack block contiguity: discovered massive sustained flooding bursts (up to 11,236 contiguous attack flows per block)
+  - [x] Verified 80 telemetry features and class balance (44.1% DoS-Hulk, 13.3% SlowHTTPTest, 42.6% Benign)
+- [x] Built windowing feature extraction in `src/windowing.py` (`aggregate_csecicids2018_windows` for 60s windows, computing flow counts, packet rates, byte volumes, and TCP flag sums)
+- [x] Executed full pipeline (Config A, B1, B2, C, IF, AR, Trivial) on CSE-CIC-IDS2018
+- [x] Measured MTTD detection delay and persistence filtering ($k \ge 1$) on contiguous flooding episodes
 
 ---
 
-### Phase 6: Evaluation & SRE Metrics
+### Phase 5: Baselines Implementation
+- [x] Implement Isolation Forest baseline in `src/baselines.py` (fitted on train, validation-calibrated threshold)
+- [x] Implement ARIMA-residual / CUSUM baseline in `src/baselines.py` (univariate one-step forecast errors aggregated across features)
+- [x] Implement Trivial Baselines in `src/baselines.py`:
+  - [x] `All-Attack` (predict 1 everywhere)
+  - [x] `All-Normal` (predict 0 everywhere)
+  - [x] `Random-Uniform` ($p = 0.5$)
+  - [x] `Random-Stratified` ($p = \text{training attack prior}$)
+
+---
+
+### Phase 6: Evaluation, Reproducibility & Saved Configs
 - [x] Implement evaluation harness in `src/evaluation.py`:
   - [x] Classification metrics: Accuracy, Precision, Recall, F1, FPR, PR-AUC, ROC-AUC, Confusion Matrix
   - [x] SRE operational metrics: Detection delay (MTTD / Mean Time to Detect), False Alarms per Day (FAPD), Total Alert Volume, Episode Recall
   - [x] Computational resource profiling: Execution time, peak memory usage via `psutil`
-- [x] Build end-to-end pipeline script `experiments/run_pipeline.py` supporting both flow-level and window-level modes
-- [x] Export structured metrics to `results/metrics/comparison_table_flow.csv` and `results/metrics/comparison_table_flow.json`
-- [x] Generate publication figures in `results/figures/comparison_f1_alerts_flow.png` and `results/figures/kneedle_curve_flow.png`
+- [x] **Saved Configs & Deterministic Reproducibility:**
+  - [x] Created `configs/unsw_nb15_flow.json`, `configs/unsw_nb15_window.json`, and `configs/cse_cic_ids2018.json`
+  - [x] Tested deterministic regeneration: every result table and figure is regenerated via `python experiments/run_pipeline.py --config configs/<name>.json`
+- [x] Recomputed full benchmark table on UNSW-NB15 with fixed label definition and trivial baselines
 
 ---
 
 ### Phase 7: Academic Paper & Presentation
 - [x] Initial outline drafted in `README.md`
 - [ ] Compile experimental tables and comparison plots
-- [ ] Draft Paper sections:
-  1. Abstract & Introduction (Cloud SRE context)
-  2. Related Work & Background (Matrix Profile, mSTAMP, Kneedle)
-  3. Original Pipeline & Ambiguities Resolved
-  4. Proposed Extensions (MAD, EVT, Persistence)
-  5. Experimental Setup & Datasets
-  6. Results & Discussion (Ablation, Baselines, SRE metrics)
-  7. Threats to Validity & Limitations
+- [ ] Draft Paper sections (Sections 1-12)
+- [ ] Prepare presentation slides and reproducible run instructions
   8. Conclusion & Future Work
 - [ ] Prepare presentation slides and reproducible run instructions
