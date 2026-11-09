@@ -127,6 +127,7 @@
 
 ### Phase 7: Academic Paper & Presentation
 - [x] Initial outline drafted in `README.md`
-- [ ] Compile experimental tables and comparison plots
+- [x] Compiled comprehensive findings and progress report into [`docs/comprehensive_findings_report.md`](docs/comprehensive_findings_report.md)
+- [x] Compile experimental tables and comparison plots (11 figures in `results/figures/` and `paper/figures/`)
 - [ ] Draft Paper sections (Sections 1-12) in LaTeX (`paper/main.tex`) and Markdown (`docs/research_paper.md`)
 - [ ] Prepare presentation slides and reproducible run instructions
