@@ -1,0 +1,43 @@
+{
+  "dataset": "UNSW-NB15",
+  "random_seed": 42,
+  "blocks": [
+    {
+      "name": "UNSW Window Realistic Proportion",
+      "mode": "window",
+      "window_sec": 10,
+      "subseq_len_m": 10,
+      "file": "data/processed/unsw_nb15_10s_any_attack.parquet",
+      "train_slice": [2000, 4000],
+      "val_slice": [4000, 4470],
+      "test_slice": [4470, 4535],
+      "is_flow_data": false
+    },
+    {
+      "name": "UNSW Window Regime Shift Demonstration",
+      "mode": "window",
+      "window_sec": 10,
+      "subseq_len_m": 10,
+      "file": "data/processed/unsw_nb15_10s_any_attack.parquet",
+      "train_slice": [1200, 3200],
+      "val_slice": [3200, 4600],
+      "test_slice": [4600, 5800],
+      "is_flow_data": false
+    },
+    {
+      "name": "UNSW Flow Contiguous Block",
+      "mode": "flow",
+      "n_samples": 8000,
+      "subseq_len_m": 5,
+      "train_frac": 0.60,
+      "val_frac": 0.20,
+      "test_frac": 0.20,
+      "is_flow_data": true
+    }
+  ],
+  "mad_c_candidates": [1.5, 2.0, 2.5, 3.0, 3.5],
+  "evt_q": 0.80,
+  "evt_risk_candidates": [0.10, 0.05, 0.02, 0.01, 0.005, 0.001],
+  "persistence_k_candidates": [1, 2, 3, 4, 5]
+}
+
