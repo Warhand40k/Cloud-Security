@@ -22,6 +22,9 @@ results/predictions/*
 !results/predictions/.gitkeep
 results/figures/*
 !results/figures/.gitkeep
+!results/v2/metrics/*.csv
+!results/v2/metrics/*.json
+!results/v2/figures/*.png
 
 # Jupyter & checkpoints
 .ipynb_checkpoints/
