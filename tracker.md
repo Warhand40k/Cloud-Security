@@ -78,12 +78,15 @@
 ---
 
 ### Phase 4b: Dataset 2: CSE-CIC-IDS2018 (AWS Cloud Telemetry & Flooding)
-- [x] Selected representative day from AWS S3 Open Data: `Friday-16-02-2018` (DoS-Hulk & DoS-SlowHTTPTest against AWS EC2 instances, 318.26 MB)
-- [x] Downloaded raw slice into `data/raw/Friday-16-02-2018_TrafficForML_CICFlowMeter.csv`
+- [x] Downloaded and verified multiple days from AWS S3 Open Data:
+  - [x] `Friday-16-02-2018` (DoS-Hulk & DoS-SlowHTTPTest, 318.26 MB)
+  - [x] `Thursday-15-02-2018` (DoS-GoldenEye & DoS-Slowloris, 358.53 MB)
+  - [x] `Wednesday-21-02-2018` (DDOS-HOIC & DDOS-LOIC-UDP, 313.66 MB)
+- [x] **File Truncation Analysis:** Formally verified the Excel $2^{20} = 1,048,576$ rows truncation across all daily CSV files originating from CICFlowMeter exports.
 - [x] Day-1 verification report compiled in `docs/day1_csecicids2018_report.md`:
-  - [x] Verified timestamps (11.96 continuous hours, 0 unparseable values, sorted chronologically)
-  - [x] Checked attack block contiguity: discovered massive sustained flooding bursts (up to 11,236 contiguous attack flows per block)
-  - [x] Verified 80 telemetry features and class balance (44.1% DoS-Hulk, 13.3% SlowHTTPTest, 42.6% Benign)
+  - [x] Verified timestamps (0 unparseable values, sorted chronologically)
+  - [x] Checked attack block contiguity: discovered massive sustained flooding bursts (up to 55,777 contiguous attack flows per block)
+  - [x] Verified 80 telemetry features and class balance across days
 - [x] Built windowing feature extraction in `src/windowing.py` (`aggregate_csecicids2018_windows` for 60s windows, computing flow counts, packet rates, byte volumes, and TCP flag sums)
 - [x] Executed full pipeline (Config A, B1, B2, C, IF, AR, Trivial) on CSE-CIC-IDS2018
 - [x] Measured MTTD detection delay and persistence filtering ($k \ge 1$) on contiguous flooding episodes
@@ -101,11 +104,20 @@
 
 ---
 
-### Phase 6: Evaluation, Reproducibility & Saved Configs
+### Phase 6: Evaluation, Robustness & Saved Configs
 - [x] Implement evaluation harness in `src/evaluation.py`:
   - [x] Classification metrics: Accuracy, Precision, Recall, F1, FPR, PR-AUC, ROC-AUC, Confusion Matrix
   - [x] SRE operational metrics: Detection delay (MTTD / Mean Time to Detect), False Alarms per Day (FAPD), Total Alert Volume, Episode Recall
+  - [x] Bootstrap 95% Confidence Intervals for F1, PR-AUC, and episode-level block MTTD with explicit ground-truth episode counts
   - [x] Computational resource profiling: Execution time, peak memory usage via `psutil`
+- [x] **Verification & Calibration Enhancements:**
+  - [x] Synthetic-discord sanity test (`scripts/synthetic_discord_test.py`): verified 0 localization error and zero look-ahead bias on injected discords.
+  - [x] EVT POT calibration fix: fitted on extended benign history, adaptive tail quantile, and risk grid support capping ($p \ge 1/(2N)$).
+- [x] **Rolling-Origin Time-Block Evaluation (`experiments/run_timeblock_and_sensitivity.py`):**
+  - [x] Multi-day temporal blocks over CSE-CIC-IDS2018 (Thursday, Friday, Wednesday); reported Mean $\pm$ Spread (Std) across blocks.
+- [x] **Sensitivity Analysis:**
+  - [x] Sensitivity to subsequence length $m \in [5, 10, 20, 30, 50, 75, 100]$ (demonstrated constant STUMPY runtime and effect on transient exploit detection).
+  - [x] Sensitivity to 4 alternative chronological slice cuts across UNSW-NB15 Batch 1.
 - [x] **Saved Configs & Deterministic Reproducibility:**
   - [x] Created `configs/unsw_nb15_flow.json`, `configs/unsw_nb15_window.json`, and `configs/cse_cic_ids2018.json`
   - [x] Tested deterministic regeneration: every result table and figure is regenerated via `python experiments/run_pipeline.py --config configs/<name>.json`
@@ -116,7 +128,5 @@
 ### Phase 7: Academic Paper & Presentation
 - [x] Initial outline drafted in `README.md`
 - [ ] Compile experimental tables and comparison plots
-- [ ] Draft Paper sections (Sections 1-12)
-- [ ] Prepare presentation slides and reproducible run instructions
-  8. Conclusion & Future Work
+- [ ] Draft Paper sections (Sections 1-12) in LaTeX (`paper/main.tex`) and Markdown (`docs/research_paper.md`)
 - [ ] Prepare presentation slides and reproducible run instructions

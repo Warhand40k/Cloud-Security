@@ -36,7 +36,12 @@ from src.baselines import (
     AllAttackBaseline, AllNormalBaseline,
     RandomUniformBaseline, RandomStratifiedBaseline
 )
-from src.evaluation import compute_classification_metrics, compute_sre_operational_metrics, ResourceProfiler
+from src.evaluation import (
+    compute_classification_metrics,
+    compute_sre_operational_metrics,
+    compute_bootstrap_confidence_intervals,
+    ResourceProfiler
+)
 from sklearn.preprocessing import StandardScaler
 
 OUTPUT_METRICS_DIR = "results/metrics"
@@ -212,6 +217,34 @@ def run_pipeline(config: Dict[str, Any], config_name: str):
 
     results_table = []
 
+    def make_row(name, cfg_type, cls_m, sre_m, pred, scores, prof_runtime, prof_mem):
+        boot = compute_bootstrap_confidence_intervals(
+            y_test, pred, scores, timestamps_test, n_bootstraps=500, seed=seed, default_step_sec=step_sec
+        )
+        return {
+            "Configuration": name,
+            "Type": cfg_type,
+            "Accuracy": cls_m["accuracy"],
+            "Precision": cls_m["precision"],
+            "Recall": cls_m["recall"],
+            "F1": cls_m["f1"],
+            "F1_CI_Low": boot.get("f1_ci", (0.0, 0.0))[0],
+            "F1_CI_High": boot.get("f1_ci", (0.0, 0.0))[1],
+            "FPR": cls_m["fpr"],
+            "PR_AUC": cls_m["pr_auc"],
+            "PR_AUC_CI_Low": boot.get("pr_auc_ci", (None, None))[0],
+            "PR_AUC_CI_High": boot.get("pr_auc_ci", (None, None))[1],
+            "Total_Alerts": sre_m["total_alerts"],
+            "False_Alarms_Per_Day": sre_m["false_alarms_per_day"],
+            "Episode_Recall": sre_m["episode_recall"],
+            "MTTD_Delay_Sec": sre_m["mean_delay_sec"],
+            "MTTD_CI_Low": boot.get("mttd_ci", (None, None))[0],
+            "MTTD_CI_High": boot.get("mttd_ci", (None, None))[1],
+            "Total_Episodes": sre_m["total_episodes"],
+            "Runtime_Sec": prof_runtime,
+            "Peak_RAM_MB": prof_mem
+        }
+
     # =========================================================================
     # TRIVIAL BASELINES
     # =========================================================================
@@ -229,22 +262,7 @@ def run_pipeline(config: Dict[str, Any], config_name: str):
         scores_te = model.score_samples(X_test)
         cls_m = compute_classification_metrics(y_test, pred_te, scores_te)
         sre_m = compute_sre_operational_metrics(y_test, pred_te, timestamps_test, default_step_sec=step_sec)
-        results_table.append({
-            "Configuration": name,
-            "Type": "Trivial Baseline",
-            "Accuracy": cls_m["accuracy"],
-            "Precision": cls_m["precision"],
-            "Recall": cls_m["recall"],
-            "F1": cls_m["f1"],
-            "FPR": cls_m["fpr"],
-            "PR_AUC": cls_m["pr_auc"],
-            "Total_Alerts": sre_m["total_alerts"],
-            "False_Alarms_Per_Day": sre_m["false_alarms_per_day"],
-            "Episode_Recall": sre_m["episode_recall"],
-            "MTTD_Delay_Sec": sre_m["mean_delay_sec"],
-            "Runtime_Sec": 0.001,
-            "Peak_RAM_MB": 0.0
-        })
+        results_table.append(make_row(name, "Trivial Baseline", cls_m, sre_m, pred_te, scores_te, 0.001, 0.0))
 
     # =========================================================================
     # CONFIG A: Base Reproduction (mSTAMP + Kneedle)
@@ -277,22 +295,9 @@ def run_pipeline(config: Dict[str, Any], config_name: str):
     cls_a = compute_classification_metrics(y_test, pred_test_a, scores_test)
     sre_a = compute_sre_operational_metrics(y_test, pred_test_a, timestamps_test, default_step_sec=step_sec)
 
-    results_table.append({
-        "Configuration": "Config A (mSTAMP + Kneedle)",
-        "Type": "Paper Reproduction",
-        "Accuracy": cls_a["accuracy"],
-        "Precision": cls_a["precision"],
-        "Recall": cls_a["recall"],
-        "F1": cls_a["f1"],
-        "FPR": cls_a["fpr"],
-        "PR_AUC": cls_a["pr_auc"],
-        "Total_Alerts": sre_a["total_alerts"],
-        "False_Alarms_Per_Day": sre_a["false_alarms_per_day"],
-        "Episode_Recall": sre_a["episode_recall"],
-        "MTTD_Delay_Sec": sre_a["mean_delay_sec"],
-        "Runtime_Sec": prof_a.elapsed_seconds,
-        "Peak_RAM_MB": prof_a.peak_mem_mb
-    })
+    results_table.append(
+        make_row("Config A (mSTAMP + Kneedle)", "Paper Reproduction", cls_a, sre_a, pred_test_a, scores_test, prof_a.elapsed_seconds, prof_a.peak_mem_mb)
+    )
 
     # =========================================================================
     # CONFIG B1: Adaptive Threshold (Rolling MAD)
@@ -323,39 +328,36 @@ def run_pipeline(config: Dict[str, Any], config_name: str):
     cls_b1 = compute_classification_metrics(y_test, pred_test_b1, scores_test)
     sre_b1 = compute_sre_operational_metrics(y_test, pred_test_b1, timestamps_test, default_step_sec=step_sec)
 
-    results_table.append({
-        "Configuration": "Config B1 (Adaptive MAD)",
-        "Type": "Our Extension",
-        "Accuracy": cls_b1["accuracy"],
-        "Precision": cls_b1["precision"],
-        "Recall": cls_b1["recall"],
-        "F1": cls_b1["f1"],
-        "FPR": cls_b1["fpr"],
-        "PR_AUC": cls_b1["pr_auc"],
-        "Total_Alerts": sre_b1["total_alerts"],
-        "False_Alarms_Per_Day": sre_b1["false_alarms_per_day"],
-        "Episode_Recall": sre_b1["episode_recall"],
-        "MTTD_Delay_Sec": sre_b1["mean_delay_sec"],
-        "Runtime_Sec": prof_b1.elapsed_seconds,
-        "Peak_RAM_MB": prof_b1.peak_mem_mb
-    })
+    results_table.append(
+        make_row("Config B1 (Adaptive MAD)", "Our Extension", cls_b1, sre_b1, pred_test_b1, scores_test, prof_b1.elapsed_seconds, prof_b1.peak_mem_mb)
+    )
 
     # =========================================================================
     # CONFIG B2: Adaptive Threshold (EVT POT)
     # =========================================================================
     print("\n--- Running Config B2: Adaptive Threshold (EVT POT) ---")
     with ResourceProfiler() as prof_b2:
-        val_normal_scores = scores_val[y_val == 0]
-        if len(val_normal_scores) < 5:
-            val_normal_scores = scores_val
+        scores_train = scores_full[:n_train]
+        train_normal = scores_train[y_train == 0]
+        val_normal = scores_val[y_val == 0]
+        if len(train_normal) > 0:
+            history_normal_scores = np.concatenate([train_normal, val_normal])
+        else:
+            history_normal_scores = val_normal if len(val_normal) >= 5 else scores_val
 
-        evt_q = config.get("evt_q", 0.90)
-        risk_candidates = config.get("evt_risk_candidates", [0.05, 0.01, 0.005, 0.001, 0.0005])
-        best_risk = 1e-3
+        n_hist = len(history_normal_scores)
+        evt_q = config.get("evt_q", 0.85)
+        raw_risk_candidates = config.get("evt_risk_candidates", [0.05, 0.02, 0.01, 0.005, 0.001])
+        min_p = max(1e-4, 1.0 / (2.0 * n_hist))
+        supported_risks = [r for r in raw_risk_candidates if r >= min_p]
+        if not supported_risks:
+            supported_risks = [max(1e-3, 1.0 / n_hist), max(5e-3, 2.0 / n_hist), max(1e-2, 5.0 / n_hist)]
+
+        best_risk = supported_risks[0]
         best_f1_b2 = -1.0
-        for r_cand in risk_candidates:
+        for r_cand in supported_risks:
             evt_cand = EVTThreshold(q=evt_q, risk_p=r_cand)
-            evt_cand.fit(val_normal_scores)
+            evt_cand.fit(history_normal_scores)
             pred_v = evt_cand.predict(scores_val)
             f1_v = compute_classification_metrics(y_val, pred_v)["f1"]
             if f1_v > best_f1_b2:
@@ -363,28 +365,15 @@ def run_pipeline(config: Dict[str, Any], config_name: str):
                 best_risk = r_cand
 
         evt_model = EVTThreshold(q=evt_q, risk_p=best_risk)
-        evt_model.fit(val_normal_scores)
+        evt_model.fit(history_normal_scores)
         pred_test_b2 = evt_model.predict(scores_test)
 
     cls_b2 = compute_classification_metrics(y_test, pred_test_b2, scores_test)
     sre_b2 = compute_sre_operational_metrics(y_test, pred_test_b2, timestamps_test, default_step_sec=step_sec)
 
-    results_table.append({
-        "Configuration": "Config B2 (Adaptive EVT)",
-        "Type": "Our Extension",
-        "Accuracy": cls_b2["accuracy"],
-        "Precision": cls_b2["precision"],
-        "Recall": cls_b2["recall"],
-        "F1": cls_b2["f1"],
-        "FPR": cls_b2["fpr"],
-        "PR_AUC": cls_b2["pr_auc"],
-        "Total_Alerts": sre_b2["total_alerts"],
-        "False_Alarms_Per_Day": sre_b2["false_alarms_per_day"],
-        "Episode_Recall": sre_b2["episode_recall"],
-        "MTTD_Delay_Sec": sre_b2["mean_delay_sec"],
-        "Runtime_Sec": prof_b2.elapsed_seconds,
-        "Peak_RAM_MB": prof_b2.peak_mem_mb
-    })
+    results_table.append(
+        make_row("Config B2 (Adaptive EVT)", "Our Extension", cls_b2, sre_b2, pred_test_b2, scores_test, prof_b2.elapsed_seconds, prof_b2.peak_mem_mb)
+    )
 
     # =========================================================================
     # CONFIG C: Persistence Filter (k consecutive)
@@ -413,22 +402,9 @@ def run_pipeline(config: Dict[str, Any], config_name: str):
     cls_c = compute_classification_metrics(y_test, pred_test_c, scores_test)
     sre_c = compute_sre_operational_metrics(y_test, pred_test_c, timestamps_test, default_step_sec=step_sec)
 
-    results_table.append({
-        "Configuration": f"Config C ({base_name} + Persist k={best_k})",
-        "Type": "Our Extension",
-        "Accuracy": cls_c["accuracy"],
-        "Precision": cls_c["precision"],
-        "Recall": cls_c["recall"],
-        "F1": cls_c["f1"],
-        "FPR": cls_c["fpr"],
-        "PR_AUC": cls_c["pr_auc"],
-        "Total_Alerts": sre_c["total_alerts"],
-        "False_Alarms_Per_Day": sre_c["false_alarms_per_day"],
-        "Episode_Recall": sre_c["episode_recall"],
-        "MTTD_Delay_Sec": sre_c["mean_delay_sec"],
-        "Runtime_Sec": prof_c.elapsed_seconds,
-        "Peak_RAM_MB": prof_c.peak_mem_mb
-    })
+    results_table.append(
+        make_row(f"Config C ({base_name} + Persist k={best_k})", "Our Extension", cls_c, sre_c, pred_test_c, scores_test, prof_c.elapsed_seconds, prof_c.peak_mem_mb)
+    )
 
     # =========================================================================
     # ML BASELINES: Isolation Forest & ARIMA Residual
@@ -444,22 +420,9 @@ def run_pipeline(config: Dict[str, Any], config_name: str):
     cls_if = compute_classification_metrics(y_test, pred_test_if, scores_test_if)
     sre_if = compute_sre_operational_metrics(y_test, pred_test_if, timestamps_test, default_step_sec=step_sec)
 
-    results_table.append({
-        "Configuration": "Baseline: Isolation Forest",
-        "Type": "ML Baseline",
-        "Accuracy": cls_if["accuracy"],
-        "Precision": cls_if["precision"],
-        "Recall": cls_if["recall"],
-        "F1": cls_if["f1"],
-        "FPR": cls_if["fpr"],
-        "PR_AUC": cls_if["pr_auc"],
-        "Total_Alerts": sre_if["total_alerts"],
-        "False_Alarms_Per_Day": sre_if["false_alarms_per_day"],
-        "Episode_Recall": sre_if["episode_recall"],
-        "MTTD_Delay_Sec": sre_if["mean_delay_sec"],
-        "Runtime_Sec": prof_if.elapsed_seconds,
-        "Peak_RAM_MB": prof_if.peak_mem_mb
-    })
+    results_table.append(
+        make_row("Baseline: Isolation Forest", "ML Baseline", cls_if, sre_if, pred_test_if, scores_test_if, prof_if.elapsed_seconds, prof_if.peak_mem_mb)
+    )
 
     with ResourceProfiler() as prof_ar:
         ar_model = ARIMAResidualBaseline(order=(1, 0, 1))
@@ -471,22 +434,9 @@ def run_pipeline(config: Dict[str, Any], config_name: str):
     cls_ar = compute_classification_metrics(y_test, pred_test_ar, scores_test_ar)
     sre_ar = compute_sre_operational_metrics(y_test, pred_test_ar, timestamps_test, default_step_sec=step_sec)
 
-    results_table.append({
-        "Configuration": "Baseline: ARIMA Residual",
-        "Type": "ML Baseline",
-        "Accuracy": cls_ar["accuracy"],
-        "Precision": cls_ar["precision"],
-        "Recall": cls_ar["recall"],
-        "F1": cls_ar["f1"],
-        "FPR": cls_ar["fpr"],
-        "PR_AUC": cls_ar["pr_auc"],
-        "Total_Alerts": sre_ar["total_alerts"],
-        "False_Alarms_Per_Day": sre_ar["false_alarms_per_day"],
-        "Episode_Recall": sre_ar["episode_recall"],
-        "MTTD_Delay_Sec": sre_ar["mean_delay_sec"],
-        "Runtime_Sec": prof_ar.elapsed_seconds,
-        "Peak_RAM_MB": prof_ar.peak_mem_mb
-    })
+    results_table.append(
+        make_row("Baseline: ARIMA Residual", "ML Baseline", cls_ar, sre_ar, pred_test_ar, scores_test_ar, prof_ar.elapsed_seconds, prof_ar.peak_mem_mb)
+    )
 
     # =========================================================================
     # Export Tables & Config Artifacts

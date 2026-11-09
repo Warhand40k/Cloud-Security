@@ -158,3 +158,101 @@ class ResourceProfiler:
     def elapsed_seconds(self) -> float:
         return self.end_time - self.start_time
 
+
+
+def compute_bootstrap_confidence_intervals(
+    y_true: np.ndarray,
+    y_pred: np.ndarray,
+    y_scores: Optional[np.ndarray] = None,
+    timestamps: Optional[np.ndarray] = None,
+    n_bootstraps: int = 1000,
+    alpha: float = 0.05,
+    seed: int = 42,
+    default_step_sec: float = 10.0
+) -> Dict[str, Any]:
+    """
+    Computes bootstrap confidence intervals (95% CI by default) for:
+    - F1 Score (instance/window resampling)
+    - PR-AUC (instance/window resampling)
+    - MTTD Delay (episode block resampling)
+    """
+    rng = np.random.default_rng(seed)
+    n_samples = len(y_true)
+    if n_samples == 0:
+        return {}
+
+    f1_boots = []
+    pr_auc_boots = []
+
+    # 1. Instance/Window Bootstrap for F1 and PR-AUC
+    for _ in range(n_bootstraps):
+        idx = rng.choice(n_samples, size=n_samples, replace=True)
+        y_t_b = y_true[idx]
+        y_p_b = y_pred[idx]
+
+        # F1
+        f1_b = f1_score(y_t_b, y_p_b, zero_division=0)
+        f1_boots.append(float(f1_b))
+
+        # PR-AUC
+        if y_scores is not None and len(np.unique(y_t_b)) > 1:
+            try:
+                pr_b = average_precision_score(y_t_b, y_scores[idx])
+                pr_auc_boots.append(float(pr_b))
+            except Exception:
+                pass
+
+    # 2. Episode-Level Block Bootstrap for MTTD
+    diffs = np.diff(y_true.astype(int))
+    starts = np.where(diffs == 1)[0] + 1
+    if y_true[0] == 1:
+        starts = np.insert(starts, 0, 0)
+    ends = np.where(diffs == -1)[0]
+    if y_true[-1] == 1:
+        ends = np.append(ends, n_samples - 1)
+
+    episodes = list(zip(starts, ends))
+    total_episodes = len(episodes)
+    mttd_boots = []
+
+    # Calculate empirical delay for each episode
+    ep_delays = []
+    for s, e in episodes:
+        ep_pred = y_pred[s:e + 1]
+        alert_idx = np.where(ep_pred == 1)[0]
+        if len(alert_idx) > 0:
+            first_step = alert_idx[0]
+            if timestamps is not None and len(timestamps) > (s + first_step):
+                delay_val = float(timestamps[s + first_step] - timestamps[s])
+            else:
+                delay_val = float(first_step * default_step_sec)
+            ep_delays.append(delay_val)
+        else:
+            # Missed episode: penalty or NaN
+            ep_delays.append(np.nan)
+
+    if total_episodes > 0:
+        ep_delays_arr = np.array(ep_delays)
+        for _ in range(n_bootstraps):
+            resamp_idx = rng.choice(total_episodes, size=total_episodes, replace=True)
+            sampled_delays = ep_delays_arr[resamp_idx]
+            valid_delays = sampled_delays[np.isfinite(sampled_delays)]
+            if len(valid_delays) > 0:
+                mttd_boots.append(float(np.mean(valid_delays)))
+
+    lower_pct = 100.0 * (alpha / 2.0)
+    upper_pct = 100.0 * (1.0 - alpha / 2.0)
+
+    f1_ci = (float(np.percentile(f1_boots, lower_pct)), float(np.percentile(f1_boots, upper_pct))) if f1_boots else (0.0, 0.0)
+    pr_auc_ci = (float(np.percentile(pr_auc_boots, lower_pct)), float(np.percentile(pr_auc_boots, upper_pct))) if pr_auc_boots else (None, None)
+    mttd_ci = (float(np.percentile(mttd_boots, lower_pct)), float(np.percentile(mttd_boots, upper_pct))) if mttd_boots else (None, None)
+
+    return {
+        "n_episodes": total_episodes,
+        "f1_ci": f1_ci,
+        "f1_std": float(np.std(f1_boots)) if f1_boots else 0.0,
+        "pr_auc_ci": pr_auc_ci,
+        "pr_auc_std": float(np.std(pr_auc_boots)) if pr_auc_boots else None,
+        "mttd_ci": mttd_ci,
+        "mttd_std": float(np.std(mttd_boots)) if mttd_boots else None
+    }

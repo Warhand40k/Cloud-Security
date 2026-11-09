@@ -118,7 +118,9 @@ def aggregate_csecicids2018_windows(
     ]
     for c in numeric_cols:
         if c in df.columns:
-            df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0.0)
+            s = pd.to_numeric(df[c], errors="coerce")
+            s = s.replace([np.inf, -np.inf], np.nan).fillna(0.0)
+            df[c] = s
 
     # Binary label (0 = Benign, 1 = Attack)
     df["is_attack"] = (df["Label"] != "Benign").astype(int)
