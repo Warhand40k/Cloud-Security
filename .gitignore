@@ -25,6 +25,7 @@ results/figures/*
 !results/v2/metrics/*.csv
 !results/v2/metrics/*.json
 !results/v2/figures/*.png
+!results/v2/predictions/*.parquet
 
 # Jupyter & checkpoints
 .ipynb_checkpoints/
