@@ -310,3 +310,4 @@ python scripts/synthetic_discord_test.py
 | **Figures** | [`results/figures/timeblock_f1_spread.png`](file:///home/amal/Hardcore/courses/cloudSRE&Security/project/results/figures/timeblock_f1_spread.png) | Barplot of model spread across CSE-CIC-IDS2018 days |
 | **Figures** | [`results/figures/sensitivity_slices.png`](file:///home/amal/Hardcore/courses/cloudSRE&Security/project/results/figures/sensitivity_slices.png) | Model robustness across 4 rolling temporal slices |
 | **Figures** | [`results/figures/unsw_nb15_flow_f1_alerts.png`](file:///home/amal/Hardcore/courses/cloudSRE&Security/project/results/figures/unsw_nb15_flow_f1_alerts.png) | F1-score vs Total Alert Volume comparison |
+
