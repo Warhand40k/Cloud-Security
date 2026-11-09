@@ -1,0 +1,317 @@
+{
+  "unsw_nb15": {
+    "raw_file_lines": {
+      "UNSW-NB15_1.csv": 700001,
+      "UNSW-NB15_2.csv": 700001,
+      "UNSW-NB15_3.csv": 700001,
+      "UNSW-NB15_4.csv": 440044
+    },
+    "raw_sum_lines": 2540047,
+    "boundary_duplicates_confirmed": [
+      true,
+      true,
+      true
+    ],
+    "deduplicated_flow_count": 2540044,
+    "official_paper_count": 2540044,
+    "discrepancy_explanation": "Each of the 3 CSV partition boundaries (1->2, 2->3, 3->4) duplicates exactly 1 flow record. 2,540,047 - 3 = 2,540,044.",
+    "batch_1": {
+      "flow_count": 1087202,
+      "attack_flows": 22215,
+      "attack_pct": 2.0433,
+      "duration_sec": 45347,
+      "duration_hours": 12.5964,
+      "epoch_stime_min": 1421927377,
+      "epoch_ltime_max": 1421972724,
+      "utc_start": "2015-01-22 11:49:37+00:00",
+      "utc_end": "2015-01-23 00:25:24+00:00",
+      "sydney_aedt_start": "2015-01-22 22:49:37+11:00",
+      "sydney_aedt_end": "2015-01-23 11:25:24+11:00"
+    },
+    "batch_gap": {
+      "gap_sec": 2246284,
+      "gap_days": 25.9987,
+      "gap_hours": 623.97
+    },
+    "batch_2": {
+      "flow_count": 1452842,
+      "attack_flows": 299068,
+      "attack_pct": 20.585,
+      "duration_sec": 43061,
+      "duration_hours": 11.9614,
+      "epoch_stime_min": 1424219008,
+      "epoch_ltime_max": 1424262069,
+      "utc_start": "2015-02-18 00:23:28+00:00",
+      "utc_end": "2015-02-18 12:21:09+00:00",
+      "sydney_aedt_start": "2015-02-18 11:23:28+11:00",
+      "sydney_aedt_end": "2015-02-18 23:21:09+11:00"
+    },
+    "sum_of_batches_matches_total": true,
+    "timezone_inconsistency_resolution": "The earliest flow record has epoch Stime=1421927377. In UTC, this is exactly 2015-01-22 11:49:37 UTC (corresponding to 2015-01-22 22:49:37 AEDT, UTC+11 in Sydney). The timestamp '03:56:06' in the previous report was an erroneous copy-paste artifact originating from CSE-CIC-IDS2018 Thursday (where the first flow timestamp is 15/02/2018 03:56:06) and does not represent the UNSW-NB15 Batch 1 start time."
+  },
+  "csecicids2018": {
+    "Friday-16-02-2018": {
+      "raw_line_count": 1048576,
+      "excel_2_20_truncated": true,
+      "raw_last_row_timestamp": "16/02/2018 10:36:33",
+      "chronological_start": "2018-02-16 01:00:32",
+      "chronological_end": "2018-02-16 12:58:24",
+      "duration_hours": 11.96,
+      "attack_flows_total": 601802,
+      "attack_flow_pct": 57.39,
+      "attack_flow_runs_count": 86805,
+      "attack_flow_run_max_len": 11236,
+      "attack_flow_run_median_len": 1.0,
+      "windows_60s_count": 191,
+      "attack_windows_count": 51,
+      "attack_windows_pct": 26.7,
+      "attack_campaigns_count": 2,
+      "attack_campaign_lengths_windows": [
+        4,
+        47
+      ]
+    },
+    "Thursday-15-02-2018": {
+      "raw_line_count": 1048576,
+      "excel_2_20_truncated": true,
+      "raw_last_row_timestamp": "15/02/2018 09:02:01",
+      "chronological_start": "2018-02-15 01:00:00",
+      "chronological_end": "2018-02-15 12:59:59",
+      "duration_hours": 12.0,
+      "attack_flows_total": 52498,
+      "attack_flow_pct": 5.01,
+      "attack_flow_runs_count": 14535,
+      "attack_flow_run_max_len": 138,
+      "attack_flow_run_median_len": 1.0,
+      "windows_60s_count": 572,
+      "attack_windows_count": 62,
+      "attack_windows_pct": 10.84,
+      "attack_campaigns_count": 5,
+      "attack_campaign_lengths_windows": [
+        5,
+        4,
+        9,
+        1,
+        43
+      ]
+    },
+    "Wednesday-21-02-2018": {
+      "raw_line_count": 1048576,
+      "excel_2_20_truncated": true,
+      "raw_last_row_timestamp": "21/02/2018 02:33:29",
+      "chronological_start": "2018-02-21 01:55:46",
+      "chronological_end": "2018-02-21 10:43:21",
+      "duration_hours": 8.79,
+      "attack_flows_total": 687742,
+      "attack_flow_pct": 65.59,
+      "attack_flow_runs_count": 175932,
+      "attack_flow_run_max_len": 55777,
+      "attack_flow_run_median_len": 2.0,
+      "windows_60s_count": 170,
+      "attack_windows_count": 59,
+      "attack_windows_pct": 34.71,
+      "attack_campaigns_count": 2,
+      "attack_campaign_lengths_windows": [
+        23,
+        36
+      ]
+    },
+    "definitions": {
+      "flow_run": "A contiguous sequence of consecutive attack flows at the raw flow record level without interleaved benign packets.",
+      "campaign": "A contiguous sequence of attack-positive windows at the evaluation granularity (e.g. 60-second windows).",
+      "episode_nomenclature_rule": "The term 'episode' is strictly reserved for campaigns (contiguous attack windows) from now on."
+    },
+    "friday_175_vs_191_explanation": "In configs/cse_cic_ids2018.json, slices were manually hardcoded as train=[0, 80], val=[80, 105], and test=[105, 175]. The test slice upper bound was set to 175 instead of the dataset length (191 windows). The final 16 windows (175 through 190) were all benign traffic that were silently omitted from evaluation."
+  },
+  "kneedle": {
+    "max_profile_curve_shape": {
+      "x_axis": "Subspace dimension k (1 to D)",
+      "y_axis": "Maximum Matrix Profile distance max(mps[k-1])",
+      "direction": "increasing (distances monotonically accumulate/increase as more dimensions are added)",
+      "curvature": "concave (second difference d2y is predominantly negative as marginal distance gain diminishes)"
+    },
+    "knee_locator_arguments": {
+      "curve": "concave",
+      "direction": "increasing",
+      "online": true
+    },
+    "code_vs_doc_audit": {
+      "src_kneedle_code": "curve='concave', direction='increasing' (correct in codebase)",
+      "comprehensive_findings_report_text": "curve='convex', direction='decreasing' (erroneous prose in previous documentation)",
+      "unit_test_status": "tests/test_kneedle.py passed (toy curve with known knee at 3 correctly identified; wrong orientation fails to identify knee)"
+    }
+  },
+  "slices": {
+    "unsw_nb15_flow": [
+      {
+        "name": "Train",
+        "start": 0,
+        "end": 4800,
+        "count": 4800,
+        "attacks": 184,
+        "attack_pct": 3.83
+      },
+      {
+        "name": "Validation",
+        "start": 4800,
+        "end": 6400,
+        "count": 1600,
+        "attacks": 108,
+        "attack_pct": 6.75
+      },
+      {
+        "name": "Test",
+        "start": 6400,
+        "end": 8000,
+        "count": 1600,
+        "attacks": 187,
+        "attack_pct": 11.69
+      }
+    ],
+    "unsw_nb15_window": [
+      {
+        "name": "Train (Pure Benign Baseline)",
+        "start": 1200,
+        "end": 3200,
+        "count": 2000,
+        "attacks": 0,
+        "attack_pct": 0.0
+      },
+      {
+        "name": "Validation (Transition)",
+        "start": 3200,
+        "end": 4600,
+        "count": 1400,
+        "attacks": 115,
+        "attack_pct": 8.21
+      },
+      {
+        "name": "Test (Regime-Shift Attack Campaign)",
+        "start": 4600,
+        "end": 5800,
+        "count": 1200,
+        "attacks": 1194,
+        "attack_pct": 99.5
+      }
+    ],
+    "csecicids2018_friday": [
+      {
+        "name": "Train",
+        "start": 0,
+        "end": 80,
+        "count": 80,
+        "attacks": 4,
+        "attack_pct": 5.0
+      },
+      {
+        "name": "Validation",
+        "start": 80,
+        "end": 105,
+        "count": 25,
+        "attacks": 20,
+        "attack_pct": 80.0
+      },
+      {
+        "name": "Test",
+        "start": 105,
+        "end": 175,
+        "count": 70,
+        "attacks": 27,
+        "attack_pct": 38.57
+      },
+      {
+        "name": "Unused Tail",
+        "start": 175,
+        "end": 191,
+        "count": 16,
+        "attacks": 0,
+        "attack_pct": 0.0
+      }
+    ],
+    "csecicids2018_thursday": [
+      {
+        "name": "Train",
+        "start": 0,
+        "end": 250,
+        "count": 250,
+        "attacks": 0,
+        "attack_pct": 0.0
+      },
+      {
+        "name": "Validation",
+        "start": 250,
+        "end": 380,
+        "count": 130,
+        "attacks": 9,
+        "attack_pct": 6.92
+      },
+      {
+        "name": "Test",
+        "start": 380,
+        "end": 550,
+        "count": 170,
+        "attacks": 53,
+        "attack_pct": 31.18
+      },
+      {
+        "name": "Unused Tail",
+        "start": 550,
+        "end": 572,
+        "count": 22,
+        "attacks": 0,
+        "attack_pct": 0.0
+      }
+    ],
+    "csecicids2018_wednesday": [
+      {
+        "name": "Train",
+        "start": 0,
+        "end": 60,
+        "count": 60,
+        "attacks": 23,
+        "attack_pct": 38.33
+      },
+      {
+        "name": "Validation",
+        "start": 60,
+        "end": 100,
+        "count": 40,
+        "attacks": 0,
+        "attack_pct": 0.0
+      },
+      {
+        "name": "Test",
+        "start": 100,
+        "end": 165,
+        "count": 65,
+        "attacks": 31,
+        "attack_pct": 47.69
+      },
+      {
+        "name": "Unused Tail",
+        "start": 165,
+        "end": 170,
+        "count": 5,
+        "attacks": 5,
+        "attack_pct": 100.0
+      }
+    ],
+    "flagged_slices_with_contamination": [
+      {
+        "slice": "csecicids2018_friday Train [0, 80]",
+        "contamination": "4 attack windows (5.00%)",
+        "issue": "Used as benign baseline in Config B2 EVT and Isolation Forest, but contains active attack traffic."
+      },
+      {
+        "slice": "csecicids2018_wednesday Train [0, 60]",
+        "contamination": "23 attack windows (38.33%)",
+        "issue": "Contains heavy attack traffic (38.33% attacks), violating the benign reference assumption."
+      },
+      {
+        "slice": "unsw_nb15_flow Train [0, 4800]",
+        "contamination": "184 attack flows (3.83%)",
+        "issue": "Standard chronological slice contains interleaved attacks; must be explicitly acknowledged as contaminated reference if used for benign baseline."
+      }
+    ]
+  }
+}
