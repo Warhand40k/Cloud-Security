@@ -51,3 +51,4 @@ This document details every mathematical, algorithmic, and evaluation decision i
   3. **Operational Metrics:** Simultaneously reported ROC-AUC, PR-AUC, Prevalence, PR-AUC Lift, Precision, Recall, $F_1$, FPR, Campaign Recall next to MTTD (detected campaigns only), total campaign counts, alerts/1,000 windows, and alerts/hour.
   4. **Uncertainty Quantification:** Moving-Block Bootstrap (MBB, $B=m$, 500 resamples) preserving temporal autocorrelation.
   5. **Matched-Operating-Point Comparison:** Evaluated alert volume at matched recall (0.80 and 0.50) and matched FPR (0.01 and 0.05).
+

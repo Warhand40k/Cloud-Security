@@ -167,3 +167,4 @@ Alert volume is reported at **matched recall** rather than unconditional alert r
 | **Determinism** | Identical seeds reproduce exact metrics bit-for-bit | **PASS** | Manifest hashes: `csecicids2018_manifest.json`, `unsw_manifest.json` |
 | **Traceability** | Every number in report originates from saved file in `results/v2/` | **PASS** | `results/v2/metrics/*.csv`, `results/v2/metrics/*.json` |
 | **Unit Tests** | Unit tests pass for Kneedle, causal alignment, and zero future look-ahead | **PASS** | `tests/test_kneedle.py`, `tests/test_causal_ab_scorer.py` (Ran 6 tests in 15.74s, 0 failures) |
+
