@@ -66,10 +66,13 @@ class EVTThreshold:
     - Risk probability capped by sample size support (p >= 1 / (2*N)).
     - GPD shape parameter regularized to [-0.5, 0.5] for stable extrapolation.
     """
-    def __init__(self, q: float = 0.85, risk_p: float = 1e-2):
+    def __init__(self, q: float = 0.85, risk_p: float = 1e-2, min_excesses: int = 30):
         self.q = q
         self.risk_p = risk_p
+        self.min_excesses = min_excesses
         self.u_ = 0.0
+        self.effective_q_ = q
+        self.n_excesses_ = 0
         self.shape_gamma_ = 0.0
         self.scale_sigma_ = 0.0
         self.threshold_ = 0.0
@@ -77,6 +80,7 @@ class EVTThreshold:
     def fit(self, scores: np.ndarray):
         """
         Fit POT on benign history scores.
+        Ensures >= min_excesses (default 30) for reliable GPD fitting.
         """
         clean_scores = scores[np.isfinite(scores)]
         n = len(clean_scores)
@@ -88,18 +92,21 @@ class EVTThreshold:
         min_supportable_p = max(1e-4, 1.0 / (2.0 * n))
         effective_p = max(self.risk_p, min_supportable_p)
 
-        # Adaptively adjust quantile q if needed to ensure at least 10 excesses
+        # Adaptively adjust quantile q if needed to ensure at least min_excesses (e.g. 30)
         effective_q = self.q
         self.u_ = float(np.quantile(clean_scores, effective_q))
         excesses = clean_scores[clean_scores > self.u_] - self.u_
         n_u = len(excesses)
 
-        # If too few excesses, lower q down to 0.70
-        while n_u < 10 and effective_q > 0.70:
+        # If too few excesses, adjust q downwards step-by-step
+        while n_u < self.min_excesses and effective_q > 0.50 and n >= self.min_excesses:
             effective_q -= 0.05
             self.u_ = float(np.quantile(clean_scores, effective_q))
             excesses = clean_scores[clean_scores > self.u_] - self.u_
             n_u = len(excesses)
+
+        self.effective_q_ = effective_q
+        self.n_excesses_ = n_u
 
         if n_u < 5:
             # Fallback to empirical quantile if sample is too tiny

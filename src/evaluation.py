@@ -30,6 +30,10 @@ def compute_classification_metrics(
     rec = recall_score(y_true, y_pred, zero_division=0)
     f1 = f1_score(y_true, y_pred, zero_division=0)
     fpr = float(fp / (fp + tn)) if (fp + tn) > 0 else 0.0
+    support_total = int(len(y_true))
+    support_attacks = int(y_true.sum())
+    support_normal = int((y_true == 0).sum())
+    prevalence = float(support_attacks / support_total) if support_total > 0 else 0.0
 
     metrics = {
         "accuracy": float(acc),
@@ -37,25 +41,31 @@ def compute_classification_metrics(
         "recall": float(rec),
         "f1": float(f1),
         "fpr": float(fpr),
+        "prevalence": prevalence,
         "tp": int(tp),
         "fp": int(fp),
         "tn": int(tn),
         "fn": int(fn),
-        "support_total": int(len(y_true)),
-        "support_attacks": int(y_true.sum()),
-        "support_normal": int((y_true == 0).sum())
+        "support_total": support_total,
+        "support_attacks": support_attacks,
+        "support_normal": support_normal
     }
 
     if y_scores is not None and len(np.unique(y_true)) > 1:
         try:
-            metrics["pr_auc"] = float(average_precision_score(y_true, y_scores))
-            metrics["roc_auc"] = float(roc_auc_score(y_true, y_scores))
+            pr_val = float(average_precision_score(y_true, y_scores))
+            roc_val = float(roc_auc_score(y_true, y_scores))
+            metrics["pr_auc"] = pr_val
+            metrics["roc_auc"] = roc_val
+            metrics["pr_auc_lift"] = float((pr_val - prevalence) / prevalence) if prevalence > 0 else 0.0
         except Exception:
             metrics["pr_auc"] = None
             metrics["roc_auc"] = None
+            metrics["pr_auc_lift"] = None
     else:
         metrics["pr_auc"] = None
         metrics["roc_auc"] = None
+        metrics["pr_auc_lift"] = None
 
     return metrics
 
@@ -63,12 +73,16 @@ def compute_sre_operational_metrics(
     y_true: np.ndarray,
     y_pred: np.ndarray,
     timestamps: Optional[np.ndarray] = None,
-    default_step_sec: float = 10.0
+    default_step_sec: float = 10.0,
+    is_flow_data: bool = False
 ) -> Dict[str, Any]:
     """
     Compute SRE operational metrics:
-    - Detection delay (time/steps from start of attack episode to first alert)
-    - False Alarms per Day (FAPD)
+    - Episode/campaign detection delay (MTTD computed strictly over detected campaigns)
+    - Episode/campaign recall (detected campaigns / total campaigns)
+    - Alerts per 1,000 windows (or per 1,000 flows)
+    - Alerts per hour
+    - False Alarms per Day (FAPD) (omitted for flow-level data)
     - Total Alert Volume
     """
     total_steps = len(y_true)
@@ -85,13 +99,16 @@ def compute_sre_operational_metrics(
         total_duration_sec = total_steps * default_step_sec
 
     total_days = total_duration_sec / 86400.0
+    total_hours = total_duration_sec / 3600.0
 
     tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
     total_alerts = int(y_pred.sum())
-    fapd = float(fp / total_days) if total_days > 0 else 0.0
+    fapd = float(fp / total_days) if (total_days > 0 and not is_flow_data) else None
+    alerts_per_1000 = float(total_alerts * 1000.0 / total_steps) if total_steps > 0 else 0.0
+    alerts_per_hour = float(total_alerts / total_hours) if total_hours > 0 else 0.0
 
     # Episode-level detection delay
-    # Identify contiguous attack episodes
+    # Identify contiguous attack episodes (campaigns)
     diffs = np.diff(y_true.astype(int))
     starts = np.where(diffs == 1)[0] + 1
     if y_true[0] == 1:
@@ -125,14 +142,20 @@ def compute_sre_operational_metrics(
         "total_alerts": total_alerts,
         "false_alarms": int(fp),
         "false_alarms_per_day": fapd,
+        "alerts_per_1000_windows": alerts_per_1000,
+        "alerts_per_hour": alerts_per_hour,
         "total_episodes": total_episodes,
+        "total_campaigns": total_episodes,
         "episodes_detected": episodes_detected,
+        "campaigns_detected": episodes_detected,
         "episode_recall": episode_recall,
+        "campaign_recall": episode_recall,
         "mean_delay_steps": float(np.mean(delays_steps)) if delays_steps else None,
         "median_delay_steps": float(np.median(delays_steps)) if delays_steps else None,
         "mean_delay_sec": float(np.mean(delays_sec)) if delays_sec else None,
+        "mttd_detected_campaigns_only_sec": float(np.mean(delays_sec)) if delays_sec else None,
         "median_delay_sec": float(np.median(delays_sec)) if delays_sec else None,
-        "total_duration_hours": float(total_duration_sec / 3600.0)
+        "total_duration_hours": float(total_hours)
     }
 
 class ResourceProfiler:
@@ -165,30 +188,37 @@ def compute_bootstrap_confidence_intervals(
     y_pred: np.ndarray,
     y_scores: Optional[np.ndarray] = None,
     timestamps: Optional[np.ndarray] = None,
-    n_bootstraps: int = 1000,
+    n_bootstraps: int = 500,
     alpha: float = 0.05,
     seed: int = 42,
-    default_step_sec: float = 10.0
+    default_step_sec: float = 10.0,
+    block_size: int = 10
 ) -> Dict[str, Any]:
     """
-    Computes bootstrap confidence intervals (95% CI by default) for:
-    - F1 Score (instance/window resampling)
-    - PR-AUC (instance/window resampling)
-    - MTTD Delay (episode block resampling)
+    Computes Moving-Block Bootstrap (MBB) confidence intervals (95% CI by default) for:
+    - F1 Score (moving-block resampling of contiguous length B=block_size)
+    - PR-AUC (moving-block resampling of contiguous length B=block_size)
+    - MTTD Delay (episode/campaign block resampling over detected campaigns)
     """
     rng = np.random.default_rng(seed)
     n_samples = len(y_true)
     if n_samples == 0:
         return {}
 
+    b_size = max(1, min(block_size, n_samples // 2)) if n_samples > 2 else 1
+    num_blocks = int(np.ceil(n_samples / b_size))
+    max_start = max(1, n_samples - b_size + 1)
+
     f1_boots = []
     pr_auc_boots = []
 
-    # 1. Instance/Window Bootstrap for F1 and PR-AUC
+    # 1. Moving-Block Bootstrap (MBB) for F1 and PR-AUC
     for _ in range(n_bootstraps):
-        idx = rng.choice(n_samples, size=n_samples, replace=True)
-        y_t_b = y_true[idx]
-        y_p_b = y_pred[idx]
+        starts = rng.integers(0, max_start, size=num_blocks)
+        indices = np.concatenate([np.arange(s, s + b_size) for s in starts])[:n_samples]
+        
+        y_t_b = y_true[indices]
+        y_p_b = y_pred[indices]
 
         # F1
         f1_b = f1_score(y_t_b, y_p_b, zero_division=0)
@@ -197,12 +227,12 @@ def compute_bootstrap_confidence_intervals(
         # PR-AUC
         if y_scores is not None and len(np.unique(y_t_b)) > 1:
             try:
-                pr_b = average_precision_score(y_t_b, y_scores[idx])
+                pr_b = average_precision_score(y_t_b, y_scores[indices])
                 pr_auc_boots.append(float(pr_b))
             except Exception:
                 pass
 
-    # 2. Episode-Level Block Bootstrap for MTTD
+    # 2. Episode/Campaign Block Bootstrap for MTTD
     diffs = np.diff(y_true.astype(int))
     starts = np.where(diffs == 1)[0] + 1
     if y_true[0] == 1:
@@ -228,7 +258,7 @@ def compute_bootstrap_confidence_intervals(
                 delay_val = float(first_step * default_step_sec)
             ep_delays.append(delay_val)
         else:
-            # Missed episode: penalty or NaN
+            # Missed episode
             ep_delays.append(np.nan)
 
     if total_episodes > 0:
@@ -249,6 +279,7 @@ def compute_bootstrap_confidence_intervals(
 
     return {
         "n_episodes": total_episodes,
+        "total_campaigns": total_episodes,
         "f1_ci": f1_ci,
         "f1_std": float(np.std(f1_boots)) if f1_boots else 0.0,
         "pr_auc_ci": pr_auc_ci,
