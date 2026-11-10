@@ -18,7 +18,9 @@
 | **Phase 4b** | Dataset 2: CSE-CIC-IDS2018 (AWS Cloud Telemetry & Flooding) | ✅ Completed | 100% |
 | **Phase 5** | Baselines (Isolation Forest, ARIMA, Trivial Baselines) | ✅ Completed | 100% |
 | **Phase 6** | Comprehensive Evaluation (ML, SRE, Configs & Gap Decision) | ✅ Completed | 100% |
-| **Phase 7** | Research Paper Draft & Presentation Deliverables | 🔄 In Progress | 30% |
+| **Stage 1.5** | Foundation Repairs (Time-Axis, Reference Sizing, Saturation Diagnosis) | ✅ Completed | 100% |
+| **Stage 2** | Positive Contribution: Split-Conformal & Adaptive Thresholding | ✅ Completed | 100% |
+| **Phase 7** | Research Paper Draft & Presentation Deliverables | 🔄 In Progress | 45% |
 
 ---
 
@@ -122,6 +124,33 @@
   - [x] Created `configs/unsw_nb15_flow.json`, `configs/unsw_nb15_window.json`, and `configs/cse_cic_ids2018.json`
   - [x] Tested deterministic regeneration: every result table and figure is regenerated via `python experiments/run_pipeline.py --config configs/<name>.json`
 - [x] Recomputed full benchmark table on UNSW-NB15 with fixed label definition and trivial baselines
+
+---
+
+### Stage 1.5: Evaluation Foundations & Diagnostic Audit
+- [x] Regular 60-second gapless time series with real UTC timestamps (`src/windowing.py`)
+- [x] Chronological split integrity assertion ($\text{Train} < \text{Val} < \text{Test}$, `tests/test_chronological_time_integrity.py`)
+- [x] Standardized campaign accounting ($g=0$ clipped to slice, `tests/test_campaign_accounting_consistency.py`)
+- [x] Enforced minimum reference sizing ($N \ge 100$) and demonstrated ranking sensitivity (`results/v3_1/metrics/csecicids2018_ranking_comparison.csv`)
+- [x] Unified label-free threshold rule ($\text{FAR} \le \alpha$ on held-out benign scores with tie adjustment, `src/adaptive_threshold.py`)
+- [x] Mathematical diagnosis of saturation (refuted stale reference hypothesis, fixed zero scores and zero-MAD collapse)
+- [x] Paired persistence analysis ($k \in \{1..5\}$ on identical scores/thresholds; refuted Claim #8)
+- [x] Multi-block flow evaluation (10 contiguous blocks of 8,000 flows, proving matrix profile unsuited for flow data)
+- [x] Pre-registered Stage 2 Fusion Gate outcome (`NO-GO` due to zero orthogonal recall gain and FPR inflation)
+
+---
+
+### Stage 2: One Positive Contribution (Split-Conformal & Adaptive Thresholding)
+- [x] Implemented `ConformalQuantileThreshold` in `src/adaptive_threshold.py`:
+  - [x] Static Split-Conformal with exact p-values and point-mass tie adjustment
+  - [x] Causal Rolling Split-Conformal ($W = 60$) with anti-poisoning self-filtering
+  - [x] Adaptive Conformal Inference (ACI; Gibbs & Candès 2021) with dynamic nominal risk tracking
+- [x] Created unit tests in `tests/test_conformal_threshold.py` (6/6 tests passing; 27/27 total suite passing)
+- [x] Built and executed benchmark evaluation in `experiments/run_stage2_conformal_evaluations.py` across CSE-CIC-IDS2018 and UNSW-NB15
+- [x] Proved FPR control: ACI reduced test FPR from 12.37% down to 2.86% ($\alpha=0.05$) and 1.06% ($\alpha=0.01$)
+- [x] Demonstrated boost in top detectors ($F_1: 0.8624 \to 0.9792$ on Friday Hulk; $F_1: 0.9863 \to 1.0000$ on Wednesday LOIC)
+- [x] Generated publication figures in `results/v3_2/figures/`
+- [x] Compiled comprehensive Stage 2 report in `docs/stage2_conformal_results.md`
 
 ---
 

@@ -185,3 +185,239 @@ class EVTThreshold:
 
     def predict(self, scores: np.ndarray) -> np.ndarray:
         return (scores >= self.threshold_).astype(int)
+
+
+class ConformalQuantileThreshold:
+    """
+    Stage 2: Split-Conformal Anomaly Threshold Calibrator.
+    
+    Provides finite-sample false alarm rate (FAR) guarantees under exchangeability:
+        P(Score_test >= tau_alpha | Benign) <= alpha
+        
+    Implements:
+    1. Static Split-Conformal:
+       Calibrates threshold tau_alpha = Quantile(S_cal, ceil((n+1)*(1-alpha)) / n).
+       Computes exact conformal p-values:
+           p(s) = (1 + sum(S_cal >= s)) / (n + 1)
+       Alert flagged if p(s) <= alpha.
+       
+    2. Rolling Split-Conformal:
+       Maintains a causal sliding window of recent benign calibration scores of size W.
+       Adapts dynamically to diurnal shifts and gradual drift.
+       
+    3. Adaptive Conformal Inference (ACI; Gibbs & Candès 2021):
+       Dynamically updates the effective nominal risk level:
+           alpha_{t+1} = alpha_t + gamma * (alpha - err_t)
+       guaranteeing long-run average coverage even under arbitrary non-exchangeable drift.
+       
+    4. Point-mass tie adjustment:
+       Ensures that empirical point masses (e.g. 0-inflated scores) do not violate FAR <= alpha.
+    """
+    def __init__(
+        self,
+        alpha: float = 0.05,
+        eps: float = 1e-6
+    ):
+        self.alpha = alpha
+        self.eps = eps
+        self.cal_scores_: np.ndarray = np.array([])
+        self.n_cal_: int = 0
+        self.threshold_: float = 0.0
+        self.nominal_q_: float = 1.0 - alpha
+
+    def fit(self, cal_scores: np.ndarray, y_cal: Optional[np.ndarray] = None) -> "ConformalQuantileThreshold":
+        """
+        Fit split-conformal calibrator on calibration scores.
+        If y_cal is provided, filters strictly to benign calibration instances (y_cal == 0).
+        """
+        if y_cal is not None:
+            benign_mask = (y_cal == 0)
+            clean = cal_scores[benign_mask] if np.any(benign_mask) else cal_scores
+        else:
+            clean = cal_scores
+
+        clean = clean[np.isfinite(clean)]
+        self.cal_scores_ = np.sort(clean)
+        self.n_cal_ = len(self.cal_scores_)
+
+        if self.n_cal_ == 0:
+            self.threshold_ = 0.0
+            return self
+
+        # Finite-sample split-conformal quantile index: ceil((n + 1) * (1 - alpha)) / n
+        q_idx = int(np.ceil((self.n_cal_ + 1) * (1.0 - self.alpha)))
+        q_idx = max(1, min(self.n_cal_, q_idx))
+        # Zero-indexed: element at q_idx - 1
+        self.threshold_ = float(self.cal_scores_[q_idx - 1])
+
+        # Point-mass tie adjustment: ensure empirical FAR <= alpha
+        emp_far = float(np.mean(self.cal_scores_ >= self.threshold_))
+        if emp_far > self.alpha:
+            higher = self.cal_scores_[self.cal_scores_ > self.threshold_]
+            if len(higher) > 0:
+                self.threshold_ = float(np.min(higher))
+            else:
+                self.threshold_ = self.threshold_ + self.eps
+
+        return self
+
+    def compute_p_values(self, test_scores: np.ndarray) -> np.ndarray:
+        """
+        Compute conformal p-values for an array of test scores against the calibration set:
+            p(s) = (1 + sum(S_cal >= s)) / (n_cal + 1)
+        """
+        if self.n_cal_ == 0:
+            return np.ones_like(test_scores, dtype=float)
+
+        # Using searchsorted for vectorized O((N + M) log N) computation
+        # cal_scores_ is sorted in ascending order.
+        # np.searchsorted(..., side='left') gives number of elements < s.
+        # So elements >= s is n_cal - searchsorted(..., s, side='left').
+        n_greater_equal = self.n_cal_ - np.searchsorted(self.cal_scores_, test_scores, side="left")
+        p_vals = (1.0 + n_greater_equal) / (self.n_cal_ + 1.0)
+        return p_vals
+
+    def predict(self, test_scores: np.ndarray, alpha: Optional[float] = None) -> np.ndarray:
+        """
+        Predict binary alerts (1 = Anomaly, 0 = Normal) at significance level alpha.
+        Alert when p-value <= alpha (or test_score >= threshold_).
+        """
+        target_alpha = self.alpha if alpha is None else alpha
+        if self.n_cal_ == 0:
+            return np.zeros_like(test_scores, dtype=int)
+
+        if alpha is not None and alpha != self.alpha:
+            # Recompute threshold for custom alpha
+            q_idx = int(np.ceil((self.n_cal_ + 1) * (1.0 - target_alpha)))
+            q_idx = max(1, min(self.n_cal_, q_idx))
+            thresh = float(self.cal_scores_[q_idx - 1])
+            emp_far = float(np.mean(self.cal_scores_ >= thresh))
+            if emp_far > target_alpha:
+                higher = self.cal_scores_[self.cal_scores_ > thresh]
+                if len(higher) > 0:
+                    thresh = float(np.min(higher))
+                else:
+                    thresh = thresh + self.eps
+        else:
+            thresh = self.threshold_
+
+        return (test_scores >= thresh).astype(int)
+
+    def predict_rolling(
+        self,
+        test_scores: np.ndarray,
+        window_size: int = 60,
+        alpha: Optional[float] = None,
+        verified_benign_mask: Optional[np.ndarray] = None
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Causal Rolling Conformal Thresholding.
+        At each time step t, threshold tau_t is calibrated on the most recent
+        window of calibration scores (initially seeded from cal_scores_).
+        
+        If verified_benign_mask is provided, only verified benign test scores enter
+        the rolling buffer (preventing attack poisoning).
+        
+        Returns:
+            (predictions, rolling_thresholds)
+        """
+        target_alpha = self.alpha if alpha is None else alpha
+        n_test = len(test_scores)
+        preds = np.zeros(n_test, dtype=int)
+        thresholds = np.zeros(n_test, dtype=float)
+
+        # Initialize rolling buffer with initial calibration scores
+        buffer = list(self.cal_scores_[-window_size:]) if self.n_cal_ > 0 else []
+
+        for t in range(n_test):
+            if len(buffer) < 10:
+                cur_thresh = self.threshold_
+            else:
+                buf_arr = np.sort(np.array(buffer))
+                n_b = len(buf_arr)
+                q_idx = int(np.ceil((n_b + 1) * (1.0 - target_alpha)))
+                q_idx = max(1, min(n_b, q_idx))
+                cur_thresh = float(buf_arr[q_idx - 1])
+                emp_far = float(np.mean(buf_arr >= cur_thresh))
+                if emp_far > target_alpha:
+                    higher = buf_arr[buf_arr > cur_thresh]
+                    cur_thresh = float(np.min(higher)) if len(higher) > 0 else cur_thresh + self.eps
+
+            thresholds[t] = cur_thresh
+            score_t = test_scores[t]
+            is_anomaly = int(score_t >= cur_thresh)
+            preds[t] = is_anomaly
+
+            # Buffer update logic:
+            should_add = False
+            if verified_benign_mask is not None:
+                should_add = bool(verified_benign_mask[t])
+            else:
+                should_add = (is_anomaly == 0)
+
+            if should_add:
+                buffer.append(score_t)
+                if len(buffer) > window_size:
+                    buffer.pop(0)
+
+        return preds, thresholds
+
+    def predict_aci(
+        self,
+        test_scores: np.ndarray,
+        gamma: float = 0.01,
+        window_size: int = 60,
+        alpha: Optional[float] = None,
+        verified_benign_mask: Optional[np.ndarray] = None
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Adaptive Conformal Inference (ACI; Gibbs & Candès 2021).
+        Dynamically adjusts the nominal risk alpha_t based on past coverage errors:
+            alpha_{t+1} = alpha_t + gamma * (alpha - err_t)
+        where err_t = 1 if false alarm, 0 otherwise (on benign points).
+        
+        Returns:
+            (predictions, rolling_thresholds, adapted_alphas)
+        """
+        target_alpha = self.alpha if alpha is None else alpha
+        n_test = len(test_scores)
+        preds = np.zeros(n_test, dtype=int)
+        thresholds = np.zeros(n_test, dtype=float)
+        adapted_alphas = np.zeros(n_test, dtype=float)
+
+        alpha_t = target_alpha
+        buffer = list(self.cal_scores_[-window_size:]) if self.n_cal_ > 0 else []
+
+        for t in range(n_test):
+            adapted_alphas[t] = alpha_t
+
+            if len(buffer) < 10:
+                cur_thresh = self.threshold_
+            else:
+                buf_arr = np.sort(np.array(buffer))
+                n_b = len(buf_arr)
+                q_idx = int(np.ceil((n_b + 1) * (1.0 - alpha_t)))
+                q_idx = max(1, min(n_b, q_idx))
+                cur_thresh = float(buf_arr[q_idx - 1])
+                emp_far = float(np.mean(buf_arr >= cur_thresh))
+                if emp_far > alpha_t:
+                    higher = buf_arr[buf_arr > cur_thresh]
+                    cur_thresh = float(np.min(higher)) if len(higher) > 0 else cur_thresh + self.eps
+
+            thresholds[t] = cur_thresh
+            score_t = test_scores[t]
+            is_anomaly = int(score_t >= cur_thresh)
+            preds[t] = is_anomaly
+
+            is_benign = True
+            if verified_benign_mask is not None:
+                is_benign = bool(verified_benign_mask[t])
+
+            if is_benign:
+                err_t = float(is_anomaly)
+                alpha_t = float(np.clip(alpha_t + gamma * (target_alpha - err_t), 0.001, 0.50))
+                buffer.append(score_t)
+                if len(buffer) > window_size:
+                    buffer.pop(0)
+
+        return preds, thresholds, adapted_alphas
