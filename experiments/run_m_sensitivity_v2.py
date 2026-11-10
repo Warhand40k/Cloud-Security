@@ -29,8 +29,8 @@ from src.evaluation import (
     ResourceProfiler
 )
 
-OUTPUT_METRICS_DIR = "results/v2/metrics"
-OUTPUT_FIGURES_DIR = "results/v2/figures"
+OUTPUT_METRICS_DIR = "results/v3/metrics"
+OUTPUT_FIGURES_DIR = "results/v3/figures"
 os.makedirs(OUTPUT_METRICS_DIR, exist_ok=True)
 os.makedirs(OUTPUT_FIGURES_DIR, exist_ok=True)
 
@@ -126,7 +126,13 @@ def run_m_sensitivity():
             "Test_FPR": cls_m["fpr"],
             "Test_PR_AUC": cls_m["pr_auc"],
             "Test_ROC_AUC": cls_m["roc_auc"],
+            "Prevalence": cls_m["prevalence"],
+            "PR_AUC_Lift": cls_m.get("pr_auc_lift"),
+            "Beats_All_Attack_F1": "yes" if cls_m["f1"] > 0.209289 else "no",
             "Test_Campaign_Recall": sre_m["campaign_recall"],
+            "Campaign_Recall_Count": sre_m.get("campaign_recall_ratio", f"{sre_m['campaigns_detected']}/{sre_m['total_campaigns']}"),
+            "Campaign_Recall_CI_Low": sre_m.get("campaign_recall_ci_low"),
+            "Campaign_Recall_CI_High": sre_m.get("campaign_recall_ci_high"),
             "Test_Total_Alerts": sre_m["total_alerts"],
             "Alerts_Per_1000_Flows": sre_m["alerts_per_1000_windows"],
             "Runtime_Sec": elapsed_sec,
@@ -135,10 +141,13 @@ def run_m_sensitivity():
         print(f"  m={m_cand:3d}{'*' if is_val_opt else ' '} | Test F1={cls_m['f1']:.4f} [95% CI: {boot['f1_ci'][0]:.4f}, {boot['f1_ci'][1]:.4f}] | Prec={cls_m['precision']:.4f} | Rec={cls_m['recall']:.4f} | FPR={cls_m['fpr']:.4f}")
 
     df_m = pd.DataFrame(records)
-    csv_out = os.path.join(OUTPUT_METRICS_DIR, "sensitivity_m_v2.csv")
-    json_out = os.path.join(OUTPUT_METRICS_DIR, "sensitivity_m_v2.json")
+    csv_out = os.path.join(OUTPUT_METRICS_DIR, "sensitivity_m.csv")
+    json_out = os.path.join(OUTPUT_METRICS_DIR, "sensitivity_m.json")
     df_m.to_csv(csv_out, index=False)
     df_m.to_json(json_out, orient="records", indent=2)
+    # Also save with v2 name for backward compatibility
+    df_m.to_csv(os.path.join(OUTPUT_METRICS_DIR, "sensitivity_m_v2.csv"), index=False)
+    df_m.to_json(os.path.join(OUTPUT_METRICS_DIR, "sensitivity_m_v2.json"), orient="records", indent=2)
     print(f"\nSaved sensitivity to m results to {csv_out} and {json_out}")
 
     # Plot Sensitivity to m: Val F1 vs Test F1 with CI and optimal marker
@@ -169,8 +178,9 @@ def run_m_sensitivity():
 
     plt.title("Subsequence Length m Sensitivity: Validation Selection vs Test Evaluation (UNSW Flow)", fontsize=12, fontweight="bold")
     plt.tight_layout()
-    fig_out = os.path.join(OUTPUT_FIGURES_DIR, "sensitivity_m_v2.png")
+    fig_out = os.path.join(OUTPUT_FIGURES_DIR, "sensitivity_m.png")
     plt.savefig(fig_out, dpi=300)
+    plt.savefig(os.path.join(OUTPUT_FIGURES_DIR, "sensitivity_m_v2.png"), dpi=300)
     plt.close()
     print(f"Saved figure to {fig_out}")
 

@@ -1,11 +1,11 @@
 {
   "dataset": "UNSW-NB15",
-  "git_commit": "ddc509eb545a7b6b135f9e30092f3181b98c8cd3",
+  "git_commit": "43314e9ccd573a1e940197e785305984a2615791",
   "config_hash": "b8cab5ed1ca6717baaae015e3567d4cb32cdbe17deba6f465f0be77b0d690e0b",
   "config_path": "configs/v3/unsw_nb15.json",
   "random_seed": 42,
-  "runtime_seconds": 77.2938380241394,
-  "timestamp_iso": "2026-11-10T10:55:23Z",
+  "runtime_seconds": 88.43413138389587,
+  "timestamp_iso": "2026-11-10T11:23:18Z",
   "hardware": {
     "platform": "Linux-7.2.14-arch1-1-x86_64-with-glibc2.44",
     "processor": "",

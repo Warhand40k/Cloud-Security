@@ -116,15 +116,30 @@ def evaluate_partition(
     predictions_dict = {
         "y_true": y_test
     }
+    val_predictions_dict = {
+        "y_true": y_val
+    }
 
     # Reference All-Attack F1 score for baseline comparison
     all_attack_f1 = float(f1_score(y_test, np.ones_like(y_test), zero_division=0))
 
     # Helper evaluation function
-    def record_metrics(model_name: str, model_type: str, pred_test: np.ndarray, scores_test: Optional[np.ndarray], runtime: float = 0.0):
+    def record_metrics(
+        model_name: str,
+        model_type: str,
+        pred_test: np.ndarray,
+        scores_test: Optional[np.ndarray],
+        runtime: float = 0.0,
+        pred_val: Optional[np.ndarray] = None,
+        scores_val: Optional[np.ndarray] = None
+    ):
         predictions_dict[f"{model_name}_pred"] = pred_test
         if scores_test is not None:
             predictions_dict[f"{model_name}_score"] = scores_test
+        if pred_val is not None:
+            val_predictions_dict[f"{model_name}_pred"] = pred_val
+        if scores_val is not None:
+            val_predictions_dict[f"{model_name}_score"] = scores_val
 
         cls_m = compute_classification_metrics(y_test, pred_test, scores_test)
         sre_m = compute_sre_operational_metrics(
@@ -177,16 +192,16 @@ def evaluate_partition(
     # 1. TRIVIAL BASELINES
     # =========================================================================
     all_atk = AllAttackBaseline().fit(X_train, y_train)
-    record_metrics("Baseline: All-Attack", "Trivial", all_atk.predict(X_test), all_atk.score_samples(X_test))
+    record_metrics("Baseline: All-Attack", "Trivial", all_atk.predict(X_test), all_atk.score_samples(X_test), 0.0, all_atk.predict(X_val), all_atk.score_samples(X_val))
 
     all_norm = AllNormalBaseline().fit(X_train, y_train)
-    record_metrics("Baseline: All-Normal", "Trivial", all_norm.predict(X_test), all_norm.score_samples(X_test))
+    record_metrics("Baseline: All-Normal", "Trivial", all_norm.predict(X_test), all_norm.score_samples(X_test), 0.0, all_norm.predict(X_val), all_norm.score_samples(X_val))
 
     rand_u = RandomUniformBaseline(seed=seed).fit(X_train, y_train)
-    record_metrics("Baseline: Random Uniform", "Trivial", rand_u.predict(X_test), rand_u.score_samples(X_test))
+    record_metrics("Baseline: Random Uniform", "Trivial", rand_u.predict(X_test), rand_u.score_samples(X_test), 0.0, rand_u.predict(X_val), rand_u.score_samples(X_val))
 
     rand_s = RandomStratifiedBaseline(seed=seed).fit(X_train, y_train)
-    record_metrics("Baseline: Random Stratified", "Trivial", rand_s.predict(X_test), rand_s.score_samples(X_test))
+    record_metrics("Baseline: Random Stratified", "Trivial", rand_s.predict(X_test), rand_s.score_samples(X_test), 0.0, rand_s.predict(X_val), rand_s.score_samples(X_val))
 
     # =========================================================================
     # 2. MACHINE LEARNING BASELINES
@@ -197,7 +212,8 @@ def evaluate_partition(
         if_model.calibrate_threshold(X_val, y_val)
     record_metrics(
         "Baseline: Isolation Forest", "ML Baseline",
-        if_model.predict(X_test), if_model.score_samples(X_test), prof_if.elapsed_seconds
+        if_model.predict(X_test), if_model.score_samples(X_test), prof_if.elapsed_seconds,
+        if_model.predict(X_val), if_model.score_samples(X_val)
     )
 
     with ResourceProfiler() as prof_ar:
@@ -206,7 +222,8 @@ def evaluate_partition(
         ar_model.calibrate_threshold(X_val, y_val)
     record_metrics(
         "Baseline: ARIMA Residual", "ML Baseline",
-        ar_model.predict(X_test), ar_model.score_samples(X_test), prof_ar.elapsed_seconds
+        ar_model.predict(X_test), ar_model.score_samples(X_test), prof_ar.elapsed_seconds,
+        ar_model.predict(X_val), ar_model.score_samples(X_val)
     )
 
     # =========================================================================
@@ -235,7 +252,8 @@ def evaluate_partition(
             best_thresh_a = th
 
     pred_test_a = (scores_test_a >= best_thresh_a).astype(int)
-    record_metrics("Config A (mSTAMP+Kneedle)", "Paper Reproduction", pred_test_a, scores_test_a, prof_a.elapsed_seconds)
+    pred_val_a = (scores_val_a >= best_thresh_a).astype(int)
+    record_metrics("Config A (mSTAMP+Kneedle)", "Paper Reproduction", pred_test_a, scores_test_a, prof_a.elapsed_seconds, pred_val_a, scores_val_a)
 
     # =========================================================================
     # 4. CONFIG A-PRIME: Causal AB-Join Scorer (Benign reference history)
@@ -266,7 +284,8 @@ def evaluate_partition(
             best_thresh_aprime = th
 
     pred_test_aprime = (scores_test_aprime >= best_thresh_aprime).astype(int)
-    record_metrics("Config A-prime (Causal AB)", "Causal Extension", pred_test_aprime, scores_test_aprime, prof_aprime.elapsed_seconds)
+    pred_val_aprime = (scores_val_aprime >= best_thresh_aprime).astype(int)
+    record_metrics("Config A-prime (Causal AB)", "Causal Extension", pred_test_aprime, scores_test_aprime, prof_aprime.elapsed_seconds, pred_val_aprime, scores_val_aprime)
 
     # =========================================================================
     # 5. CONFIG B1: Adaptive MAD Threshold
@@ -290,7 +309,7 @@ def evaluate_partition(
     mad_model = MADThreshold(c=best_c, rolling_window=min(20, max(5, n_val // 2)))
     mad_model.fit(hist_normal)
     pred_test_b1 = mad_model.predict(scores_test_a)
-    record_metrics("Config B1 (Adaptive MAD)", "Extension", pred_test_b1, scores_test_a)
+    record_metrics("Config B1 (Adaptive MAD)", "Extension", pred_test_b1, scores_test_a, 0.0, mad_model.predict(scores_val_a), scores_val_a)
 
     # =========================================================================
     # 6. CONFIG B2: Adaptive EVT Peaks-Over-Threshold
@@ -309,7 +328,7 @@ def evaluate_partition(
     evt_model = EVTThreshold(q=0.80, risk_p=best_risk, min_excesses=30)
     evt_model.fit(hist_normal)
     pred_test_b2 = evt_model.predict(scores_test_a)
-    record_metrics("Config B2 (Adaptive EVT)", "Extension", pred_test_b2, scores_test_a)
+    record_metrics("Config B2 (Adaptive EVT)", "Extension", pred_test_b2, scores_test_a, 0.0, evt_model.predict(scores_val_a), scores_val_a)
 
     # =========================================================================
     # 7. CONFIG C: Persistence Filters Named by Parent C(B1, k), C(B2, k), C(A-prime, k)
@@ -326,7 +345,7 @@ def evaluate_partition(
             best_k_b1 = k_cand
     pers_model_b1 = PersistenceFilter(k=best_k_b1)
     pred_test_c_b1 = pers_model_b1.filter(pred_test_b1)
-    record_metrics(f"Config C (B1, k={best_k_b1})", "Extension", pred_test_c_b1, scores_test_a)
+    record_metrics(f"Config C (B1, k={best_k_b1})", "Extension", pred_test_c_b1, scores_test_a, 0.0, pers_model_b1.filter(base_val_alarms_b1), scores_val_a)
 
     # C(B2, k)
     base_val_alarms_b2 = evt_model.predict(scores_val_a)
@@ -340,7 +359,7 @@ def evaluate_partition(
             best_k_b2 = k_cand
     pers_model_b2 = PersistenceFilter(k=best_k_b2)
     pred_test_c_b2 = pers_model_b2.filter(pred_test_b2)
-    record_metrics(f"Config C (B2, k={best_k_b2})", "Extension", pred_test_c_b2, scores_test_a)
+    record_metrics(f"Config C (B2, k={best_k_b2})", "Extension", pred_test_c_b2, scores_test_a, 0.0, pers_model_b2.filter(base_val_alarms_b2), scores_val_a)
 
     # C(A-prime, k)
     base_val_alarms_ap = (scores_val_aprime >= best_thresh_aprime).astype(int)
@@ -354,13 +373,16 @@ def evaluate_partition(
             best_k_ap = k_cand
     pers_model_ap = PersistenceFilter(k=best_k_ap)
     pred_test_c_ap = pers_model_ap.filter(pred_test_aprime)
-    record_metrics(f"Config C (A-prime, k={best_k_ap})", "Extension", pred_test_c_ap, scores_test_aprime)
+    record_metrics(f"Config C (A-prime, k={best_k_ap})", "Extension", pred_test_c_ap, scores_test_aprime, 0.0, pers_model_ap.filter(base_val_alarms_ap), scores_val_aprime)
 
     # Save predictions
     pred_df = pd.DataFrame(predictions_dict)
     clean_block_name = block_name.replace(" ", "_").replace("(", "").replace(")", "").replace("/", "_")
     os.makedirs(output_predictions_dir, exist_ok=True)
     pred_df.to_parquet(os.path.join(output_predictions_dir, f"preds_{clean_block_name}.parquet"))
+
+    val_pred_df = pd.DataFrame(val_predictions_dict)
+    val_pred_df.to_parquet(os.path.join(output_predictions_dir, f"preds_val_{clean_block_name}.parquet"))
 
     return results
 

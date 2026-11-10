@@ -1,0 +1,60 @@
+{
+  "seed": 42,
+  "runs_compared": 2,
+  "status": "PASSED",
+  "verified_files": {
+    "metrics_combined.csv": {
+      "sha256": "647677a677c2f449df4b491f5bb2849ee9afc27764d1ff0618cd3ea799c94327",
+      "verified_identical_excluding_runtime": true,
+      "rows": 52
+    },
+    "predictions/preds_Thursday-15-02-2018.parquet": {
+      "sha256": "b31430d64a02a7fe5762bcbd9c6edc18186cac52c4434a65094eb8fdef7999ef",
+      "verified_identical": true,
+      "rows": 162,
+      "columns": 27
+    },
+    "predictions/preds_val_Thursday-15-02-2018.parquet": {
+      "sha256": "312b7a6dac1f05a92d521c78d58b3912bd30959f606a09b78750767bf0df31b5",
+      "verified_identical": true,
+      "rows": 160,
+      "columns": 27
+    },
+    "predictions/preds_Friday-16-02-2018.parquet": {
+      "sha256": "449de515042d6b717bfbe104759698a597e9489ba33556ada231d0aa20146400",
+      "verified_identical": true,
+      "rows": 106,
+      "columns": 27
+    },
+    "predictions/preds_val_Friday-16-02-2018.parquet": {
+      "sha256": "442de6dc79af9935ec9bb48c554adfa8f4ebffcf4a91c4edcbf0ed9d3698c132",
+      "verified_identical": true,
+      "rows": 59,
+      "columns": 27
+    },
+    "predictions/preds_Wednesday-21-02-2018.parquet": {
+      "sha256": "994fe4daabb9155887c24b30067255233ed19122c0c622dfd27b782fbdd756f3",
+      "verified_identical": true,
+      "rows": 70,
+      "columns": 27
+    },
+    "predictions/preds_val_Wednesday-21-02-2018.parquet": {
+      "sha256": "78fc2cd4688f06c652ee27735151689c954762a26ed1913042fc8bd18b9f5efd",
+      "verified_identical": true,
+      "rows": 84,
+      "columns": 27
+    },
+    "predictions/preds_UNSW_Flow_Contiguous_Block.parquet": {
+      "sha256": "070bed6a8f0781357e4691f10894d1e2992a8a083928396bd6d15881b01e7ce7",
+      "verified_identical": true,
+      "rows": 1600,
+      "columns": 27
+    },
+    "predictions/preds_val_UNSW_Flow_Contiguous_Block.parquet": {
+      "sha256": "b7f7558ca44045855230eeb73ef7c3edee81dfbc0d7978134c9c9048f500d900",
+      "verified_identical": true,
+      "rows": 1600,
+      "columns": 27
+    }
+  }
+}
