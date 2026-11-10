@@ -17,6 +17,14 @@ data/processed/
 
 # Results & outputs
 results/metrics/*
+*.fls
+*.fdb_latexmk
+*.aux
+*.log
+*.bbl
+*.blg
+*.out
+*.synctex.gz
 !results/metrics/.gitkeep
 results/predictions/*
 !results/predictions/.gitkeep
