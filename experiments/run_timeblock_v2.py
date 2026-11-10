@@ -35,6 +35,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import f1_score
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -57,9 +58,9 @@ from src.evaluation import (
 )
 from src.preprocessing import load_and_sort_raw_unsw, split_chronological, UNSWPreprocessor
 
-OUTPUT_METRICS_DIR = "results/v2/metrics"
-OUTPUT_PREDICTIONS_DIR = "results/v2/predictions"
-OUTPUT_FIGURES_DIR = "results/v2/figures"
+OUTPUT_METRICS_DIR = "results/v3/metrics"
+OUTPUT_PREDICTIONS_DIR = "results/v3/predictions"
+OUTPUT_FIGURES_DIR = "results/v3/figures"
 os.makedirs(OUTPUT_METRICS_DIR, exist_ok=True)
 os.makedirs(OUTPUT_PREDICTIONS_DIR, exist_ok=True)
 os.makedirs(OUTPUT_FIGURES_DIR, exist_ok=True)
@@ -94,7 +95,8 @@ def evaluate_partition(
     step_sec: float = 60.0,
     subseq_len_m: int = 10,
     seed: int = 42,
-    is_flow_data: bool = False
+    is_flow_data: bool = False,
+    output_predictions_dir: str = OUTPUT_PREDICTIONS_DIR
 ):
     """
     Evaluates all models on a single time block with strictly causal, leakage-free validation selection.
@@ -114,6 +116,9 @@ def evaluate_partition(
     predictions_dict = {
         "y_true": y_test
     }
+
+    # Reference All-Attack F1 score for baseline comparison
+    all_attack_f1 = float(f1_score(y_test, np.ones_like(y_test), zero_division=0))
 
     # Helper evaluation function
     def record_metrics(model_name: str, model_type: str, pred_test: np.ndarray, scores_test: Optional[np.ndarray], runtime: float = 0.0):
@@ -148,7 +153,11 @@ def evaluate_partition(
             "F1_CI_High": boot["f1_ci"][1],
             "FPR": cls_m["fpr"],
             "Total_Campaigns": sre_m["total_campaigns"],
+            "Campaigns_Detected": sre_m["campaigns_detected"],
             "Campaign_Recall": sre_m["campaign_recall"],
+            "Campaign_Recall_CI_Low": sre_m.get("campaign_recall_ci_low"),
+            "Campaign_Recall_CI_High": sre_m.get("campaign_recall_ci_high"),
+            "Campaign_Recall_Ratio": sre_m.get("campaign_recall_ratio", f"{sre_m['campaigns_detected']}/{sre_m['total_campaigns']}"),
             "MTTD_Detected_Sec": sre_m["mttd_detected_campaigns_only_sec"],
             "MTTD_CI_Low": boot["mttd_ci"][0],
             "MTTD_CI_High": boot["mttd_ci"][1],
@@ -158,7 +167,8 @@ def evaluate_partition(
             "Runtime_Sec": runtime,
             "Test_Samples": n_test,
             "Val_Samples": n_val,
-            "Train_Samples": n_train
+            "Train_Samples": n_train,
+            "Beats_All_Attack_F1": "yes" if cls_m["f1"] > all_attack_f1 else "no"
         }
         results.append(record)
         return record
@@ -202,7 +212,7 @@ def evaluate_partition(
     # =========================================================================
     # 3. CONFIG A: mSTAMP + Kneedle (Base paper reproduction, Self-Join)
     # =========================================================================
-    effective_m = min(subseq_len_m, max(3, n_train // 4))
+    effective_m = max(3, min(subseq_len_m, n_train - 1))
     with ResourceProfiler() as prof_a:
         mps_full, _ = compute_multidimensional_mp(X_full, m=effective_m)
         # Select knee dimension on training/validation reference data only (first n_train + n_val steps)
@@ -302,36 +312,55 @@ def evaluate_partition(
     record_metrics("Config B2 (Adaptive EVT)", "Extension", pred_test_b2, scores_test_a)
 
     # =========================================================================
-    # 7. CONFIG C: Persistence Filter (k sweep 1..5 on validation)
+    # 7. CONFIG C: Persistence Filters Named by Parent C(B1, k), C(B2, k), C(A-prime, k)
     # =========================================================================
-    # Determine base threshold variant based on validation performance
-    if best_f1_b2 > best_f1_b1:
-        base_thresh_name = "B2"
-        base_val_alarms = evt_model.predict(scores_val_a)
-        base_test_alarms = pred_test_b2
-    else:
-        base_thresh_name = "B1"
-        base_val_alarms = mad_model.predict(scores_val_a)
-        base_test_alarms = pred_test_b1
-
-    best_k = 1
-    best_f1_c = -1.0
+    # C(B1, k)
+    base_val_alarms_b1 = mad_model.predict(scores_val_a)
+    best_k_b1 = 1
+    best_f1_c_b1 = -1.0
     for k_cand in [1, 2, 3, 4, 5]:
         pf_cand = PersistenceFilter(k=k_cand)
-        f1_v = compute_classification_metrics(y_val, pf_cand.filter(base_val_alarms))["f1"]
-        if f1_v > best_f1_c:
-            best_f1_c = f1_v
-            best_k = k_cand
+        f1_v = compute_classification_metrics(y_val, pf_cand.filter(base_val_alarms_b1))["f1"]
+        if f1_v > best_f1_c_b1:
+            best_f1_c_b1 = f1_v
+            best_k_b1 = k_cand
+    pers_model_b1 = PersistenceFilter(k=best_k_b1)
+    pred_test_c_b1 = pers_model_b1.filter(pred_test_b1)
+    record_metrics(f"Config C (B1, k={best_k_b1})", "Extension", pred_test_c_b1, scores_test_a)
 
-    pers_model = PersistenceFilter(k=best_k)
-    pred_test_c = pers_model.filter(base_test_alarms)
-    config_c_name = f"Config C ({base_thresh_name}, k={best_k})"
-    record_metrics(config_c_name, "Extension", pred_test_c, scores_test_a)
+    # C(B2, k)
+    base_val_alarms_b2 = evt_model.predict(scores_val_a)
+    best_k_b2 = 1
+    best_f1_c_b2 = -1.0
+    for k_cand in [1, 2, 3, 4, 5]:
+        pf_cand = PersistenceFilter(k=k_cand)
+        f1_v = compute_classification_metrics(y_val, pf_cand.filter(base_val_alarms_b2))["f1"]
+        if f1_v > best_f1_c_b2:
+            best_f1_c_b2 = f1_v
+            best_k_b2 = k_cand
+    pers_model_b2 = PersistenceFilter(k=best_k_b2)
+    pred_test_c_b2 = pers_model_b2.filter(pred_test_b2)
+    record_metrics(f"Config C (B2, k={best_k_b2})", "Extension", pred_test_c_b2, scores_test_a)
+
+    # C(A-prime, k)
+    base_val_alarms_ap = (scores_val_aprime >= best_thresh_aprime).astype(int)
+    best_k_ap = 1
+    best_f1_c_ap = -1.0
+    for k_cand in [1, 2, 3, 4, 5]:
+        pf_cand = PersistenceFilter(k=k_cand)
+        f1_v = compute_classification_metrics(y_val, pf_cand.filter(base_val_alarms_ap))["f1"]
+        if f1_v > best_f1_c_ap:
+            best_f1_c_ap = f1_v
+            best_k_ap = k_cand
+    pers_model_ap = PersistenceFilter(k=best_k_ap)
+    pred_test_c_ap = pers_model_ap.filter(pred_test_aprime)
+    record_metrics(f"Config C (A-prime, k={best_k_ap})", "Extension", pred_test_c_ap, scores_test_aprime)
 
     # Save predictions
     pred_df = pd.DataFrame(predictions_dict)
     clean_block_name = block_name.replace(" ", "_").replace("(", "").replace(")", "").replace("/", "_")
-    pred_df.to_parquet(os.path.join(OUTPUT_PREDICTIONS_DIR, f"preds_{clean_block_name}.parquet"))
+    os.makedirs(output_predictions_dir, exist_ok=True)
+    pred_df.to_parquet(os.path.join(output_predictions_dir, f"preds_{clean_block_name}.parquet"))
 
     return results
 
@@ -361,16 +390,16 @@ def run_all_timeblock_evaluations():
         {
             "name": "Friday 16 (Hulk/SlowHTTPTest)",
             "file": "data/processed/csecicids2018_60s_any_attack.parquet",
-            "train_slice": [30, 85],
-            "val_slice": [0, 30],
+            "train_slice": [0, 26],
+            "val_slice": [26, 85],
             "test_slice": [85, 191],
             "step_sec": 60.0
         },
         {
             "name": "Wednesday 21 (HOIC/LOIC-UDP)",
             "file": "data/processed/csecicids2018_wednesday_60s_any_attack.parquet",
-            "train_slice": [39, 100],
-            "val_slice": [0, 39],
+            "train_slice": [0, 16],
+            "val_slice": [16, 100],
             "test_slice": [100, 170],
             "step_sec": 60.0
         }
@@ -417,14 +446,14 @@ def run_all_timeblock_evaluations():
         all_records.extend(res)
 
     # -------------------------------------------------------------------------
-    # PART 2: UNSW-NB15 REALISTIC PROPORTION WINDOW BLOCK
+    # PART 2: UNSW-NB15 SMALL REGIME-SHIFT BLOCK (Formerly Realistic Proportion)
     # -------------------------------------------------------------------------
-    print("\nEvaluating UNSW-NB15 Realistic Proportion Window Block...")
+    print("\nEvaluating UNSW-NB15 Small Regime-Shift Block (Batch 1 -> Batch 2, 69.2% prevalence)...")
     df_unsw_win = pd.read_parquet("data/processed/unsw_nb15_10s_any_attack.parquet")
     
-    # Train: [2000:4000] (2000 pure benign windows)
-    # Val: [4000:4470] (470 windows: 465 benign, 5 attacks)
-    # Test: [4470:4535] (65 windows: 20 benign, 45 attacks)
+    # Train: [2000:4000] (2000 pure benign windows in Batch 1)
+    # Val: [4000:4470] (470 windows straddling 26-day gap 4443->4444)
+    # Test: [4470:4535] (65 windows: 20 benign, 45 attacks in Batch 2)
     tr_win = df_unsw_win.iloc[2000:4000]
     va_win = df_unsw_win.iloc[4000:4470]
     te_win = df_unsw_win.iloc[4470:4535]
@@ -444,7 +473,7 @@ def run_all_timeblock_evaluations():
     print(f"  Test:  N={len(X_te_w)} (attacks={y_te_w.sum()}, {y_te_w.mean()*100:.1f}%)")
 
     res_unsw_real = evaluate_partition(
-        block_name="UNSW Window Realistic Proportion",
+        block_name="UNSW Window Small Regime-Shift Block",
         dataset_name="UNSW-NB15",
         X_train=X_tr_w, y_train=y_tr_w,
         X_val=X_va_w, y_val=y_va_w,
@@ -522,7 +551,7 @@ def run_all_timeblock_evaluations():
         X_test=X_te_fl, y_test=y_te_fl,
         timestamps_test=t_te_fl,
         step_sec=1.0,
-        subseq_len_m=30,
+        subseq_len_m=5,
         seed=seed,
         is_flow_data=True
     )

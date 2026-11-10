@@ -9,11 +9,49 @@ import psutil
 import numpy as np
 import pandas as pd
 from typing import Dict, Any, Tuple, Optional, List
+import scipy.stats as stats
 from sklearn.metrics import (
     precision_score, recall_score, f1_score, accuracy_score,
     roc_auc_score, average_precision_score, confusion_matrix,
     precision_recall_curve
 )
+
+def compute_clopper_pearson_ci(k: int, n: int, confidence: float = 0.95) -> Tuple[float, float]:
+    """
+    Exact Clopper-Pearson binomial confidence interval for k successes out of n trials.
+    """
+    if n <= 0:
+        return 0.0, 1.0
+    alpha = 1.0 - confidence
+    low = 0.0 if k == 0 else float(stats.beta.ppf(alpha / 2, k, n - k + 1))
+    high = 1.0 if k == n else float(stats.beta.ppf(1 - alpha / 2, k + 1, n - k))
+    return low, high
+
+def find_campaign_intervals(y_true: np.ndarray, gap_tolerance: int = 0) -> List[Tuple[int, int]]:
+    """
+    Identifies attack campaign intervals [start, end] (inclusive) in a binary label sequence.
+    A campaign is defined as a contiguous sequence of attack-positive windows (or flows).
+    When gap_tolerance > 0, adjacent positive runs separated by <= gap_tolerance benign
+    steps are merged into a single campaign.
+    Default gap_tolerance = 0 (strictly contiguous attack windows/flows; any normal window
+    marks the end of a campaign).
+    """
+    atk_indices = np.where(y_true == 1)[0]
+    if len(atk_indices) == 0:
+        return []
+    intervals = []
+    curr_start = int(atk_indices[0])
+    curr_end = int(atk_indices[0])
+    for idx in atk_indices[1:]:
+        idx = int(idx)
+        if idx - curr_end - 1 <= gap_tolerance:
+            curr_end = idx
+        else:
+            intervals.append((curr_start, curr_end))
+            curr_start = idx
+            curr_end = idx
+    intervals.append((curr_start, curr_end))
+    return intervals
 
 def compute_classification_metrics(
     y_true: np.ndarray,
@@ -105,28 +143,21 @@ def compute_sre_operational_metrics(
     total_alerts = int(y_pred.sum())
     fapd = float(fp / total_days) if (total_days > 0 and not is_flow_data) else None
     alerts_per_1000 = float(total_alerts * 1000.0 / total_steps) if total_steps > 0 else 0.0
-    alerts_per_hour = float(total_alerts / total_hours) if total_hours > 0 else 0.0
+    alerts_per_hour = float(total_alerts / total_hours) if (total_hours > 0 and not is_flow_data) else None
 
-    # Episode-level detection delay
-    # Identify contiguous attack episodes (campaigns)
-    diffs = np.diff(y_true.astype(int))
-    starts = np.where(diffs == 1)[0] + 1
-    if y_true[0] == 1:
-        starts = np.insert(starts, 0, 0)
-        
-    ends = np.where(diffs == -1)[0]
-    if y_true[-1] == 1:
-        ends = np.append(ends, total_steps - 1)
+    # Episode/campaign-level detection delay
+    # Identify attack campaigns (contiguous attack windows/flows)
+    intervals = find_campaign_intervals(y_true, gap_tolerance=0)
 
     delays_steps = []
     delays_sec = []
-    episodes_detected = 0
+    campaigns_detected = 0
 
-    for s, e in zip(starts, ends):
+    for s, e in intervals:
         ep_pred = y_pred[s:e + 1]
         alert_indices = np.where(ep_pred == 1)[0]
         if len(alert_indices) > 0:
-            episodes_detected += 1
+            campaigns_detected += 1
             first_alert_step = alert_indices[0]
             delays_steps.append(first_alert_step)
             if timestamps is not None:
@@ -135,8 +166,9 @@ def compute_sre_operational_metrics(
             else:
                 delays_sec.append(float(first_alert_step * default_step_sec))
 
-    total_episodes = len(starts)
-    episode_recall = float(episodes_detected / total_episodes) if total_episodes > 0 else 1.0
+    total_campaigns = len(intervals)
+    campaign_recall = float(campaigns_detected / total_campaigns) if total_campaigns > 0 else 1.0
+    cp_low, cp_high = compute_clopper_pearson_ci(campaigns_detected, total_campaigns, confidence=0.95)
 
     return {
         "total_alerts": total_alerts,
@@ -144,12 +176,15 @@ def compute_sre_operational_metrics(
         "false_alarms_per_day": fapd,
         "alerts_per_1000_windows": alerts_per_1000,
         "alerts_per_hour": alerts_per_hour,
-        "total_episodes": total_episodes,
-        "total_campaigns": total_episodes,
-        "episodes_detected": episodes_detected,
-        "campaigns_detected": episodes_detected,
-        "episode_recall": episode_recall,
-        "campaign_recall": episode_recall,
+        "total_episodes": total_campaigns,
+        "total_campaigns": total_campaigns,
+        "episodes_detected": campaigns_detected,
+        "campaigns_detected": campaigns_detected,
+        "episode_recall": campaign_recall,
+        "campaign_recall": campaign_recall,
+        "campaign_recall_ci_low": cp_low,
+        "campaign_recall_ci_high": cp_high,
+        "campaign_recall_ratio": f"{campaigns_detected}/{total_campaigns}",
         "mean_delay_steps": float(np.mean(delays_steps)) if delays_steps else None,
         "median_delay_steps": float(np.median(delays_steps)) if delays_steps else None,
         "mean_delay_sec": float(np.mean(delays_sec)) if delays_sec else None,

@@ -33,9 +33,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from experiments.run_timeblock_v2 import evaluate_partition, FEATURE_COLS_CSE
 
-OUTPUT_METRICS_DIR = "results/v2/metrics"
-OUTPUT_PREDICTIONS_DIR = "results/v2/predictions"
-OUTPUT_FIGURES_DIR = "results/v2/figures"
+OUTPUT_METRICS_DIR = "results/v3/metrics"
+OUTPUT_PREDICTIONS_DIR = "results/v3/predictions"
+OUTPUT_FIGURES_DIR = "results/v3/figures"
 os.makedirs(OUTPUT_METRICS_DIR, exist_ok=True)
 os.makedirs(OUTPUT_PREDICTIONS_DIR, exist_ok=True)
 os.makedirs(OUTPUT_FIGURES_DIR, exist_ok=True)
@@ -51,7 +51,7 @@ def compute_config_hash(cfg: dict) -> str:
     s = json.dumps(cfg, sort_keys=True).encode("utf-8")
     return hashlib.sha256(s).hexdigest()
 
-def run_cse_eval(config_path: str = "configs/v2/cse_cic_ids2018_multiday.json"):
+def run_cse_eval(config_path: str = "configs/v3/cse_cic_ids2018_multiday.json"):
     start_time = time.time()
     with open(config_path, "r") as f:
         config = json.load(f)
@@ -101,7 +101,8 @@ def run_cse_eval(config_path: str = "configs/v2/cse_cic_ids2018_multiday.json"):
             step_sec=float(config.get("window_sec", 60)),
             subseq_len_m=int(config.get("subseq_len_m", 10)),
             seed=seed,
-            is_flow_data=False
+            is_flow_data=False,
+            output_predictions_dir=OUTPUT_PREDICTIONS_DIR
         )
         records.extend(b_res)
 
@@ -127,8 +128,10 @@ def run_cse_eval(config_path: str = "configs/v2/cse_cic_ids2018_multiday.json"):
             "Campaign_Recall_Mean": grp["Campaign_Recall"].mean(),
             "MTTD_Detected_Sec_Mean": grp["MTTD_Detected_Sec"].dropna().mean(),
             "Total_Campaigns": int(grp["Total_Campaigns"].sum()),
+            "Campaigns_Detected": int(grp["Campaigns_Detected"].sum()) if "Campaigns_Detected" in grp.columns else None,
             "Alerts_Per_1000_Windows_Mean": grp["Alerts_Per_1000_Windows"].mean(),
-            "Alerts_Per_Hour_Mean": grp["Alerts_Per_Hour"].mean()
+            "Alerts_Per_Hour_Mean": grp["Alerts_Per_Hour"].mean(),
+            "N_Days": len(grp)
         })
     df_sum = pd.DataFrame(summary_rows)
     sum_csv = os.path.join(OUTPUT_METRICS_DIR, "csecicids2018_multiday_summary.csv")
@@ -173,7 +176,7 @@ def run_cse_eval(config_path: str = "configs/v2/cse_cic_ids2018_multiday.json"):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", default="configs/v2/cse_cic_ids2018_multiday.json")
+    parser.add_argument("--config", default="configs/v3/cse_cic_ids2018_multiday.json")
     args = parser.parse_args()
     run_cse_eval(args.config)
 
