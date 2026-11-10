@@ -94,7 +94,7 @@ Within-day training splits on Friday ($N=45$) and Wednesday ($N=16$) severely st
 ### 4.3 Root-Cause Saturation Diagnosis
 
 ![Score Histograms and Saturation Diagnosis](../paper/assets/score_histograms_saturation_diagnosis.png)
-*Figure 1: Validation and test anomaly score distributions for Config A-prime on UNSW Flow telemetry. 99.73% of benign validation scores are exactly 0.0, causing validation-$F_1$ optimization to collapse the threshold to $\tau^* = 0.0$ and driving test FPR to 100%. An $\epsilon$-MAD floor restores FPR to 0.57%, refuting the 26-day calendar gap hypothesis.*
+*Figure 1: Validation and test anomaly score distributions for Config A-prime on UNSW Flow telemetry and saturation cure. (a) 99.73% of benign validation scores are exactly 0.0, causing validation-$F_1$ optimization to collapse the threshold to $\tau^* = 0.0$ and driving test FPR to 100%. (b) An $\epsilon$-MAD floor and label-free quantile rule restore FPR from 100% to 0.57%, definitively refuting the 26-day calendar gap hypothesis.*
 
 Previous analyses hypothesized that Config A-prime's 100% false positive rate on UNSW flow data was caused by a 26-day calendar gap between reference and test sets. We traced the exact sample indices and proved that UNSW Flow Block is located entirely within Batch 1 (107 seconds after the reference period). 
 
