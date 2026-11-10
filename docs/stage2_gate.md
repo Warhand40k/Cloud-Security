@@ -16,19 +16,31 @@ If this criterion is not met, the gate decision is **NO-GO** (fusion is rejected
 
 ---
 
-## 2. Empirical Complementarity Metrics (To be Computed)
+## 2. Empirical Complementarity Metrics and Gate Decision
 
-The following metrics are computed across all 5 benchmark evaluation blocks (`Thursday-15-02-2018`, `Friday-16-02-2018`, `Wednesday-21-02-2018`, `UNSW Window Small Regime-Shift Block`, and `UNSW Window Regime Shift Demonstration`):
-1. **Spearman Rank Correlation ($r_s$):** Correlation between continuous anomaly scores $S_{\text{A-prime}}$ and $S_{\text{ARIMA}}$ on the test partition.
-2. **Jaccard Overlap ($J$):** Overlap between binary alert sets at $\alpha = 0.05$:
-   $$J(A_{\text{A-prime}}, A_{\text{ARIMA}}) = \frac{|A_{\text{A-prime}} \cap A_{\text{ARIMA}}|}{|A_{\text{A-prime}} \cup A_{\text{ARIMA}}|}$$
-3. **Oracle-OR Recall Lift:**
-   $$\Delta \text{Recall}_{\text{Oracle}} = \text{Recall}(A_{\text{A-prime}} \cup A_{\text{ARIMA}}) - \max(\text{Recall}(A_{\text{A-prime}}), \text{Recall}(A_{\text{ARIMA}}))$$
-4. **Combined Test FPR:**
-   $$\text{FPR}_{\text{Oracle}} = \text{FPR}(A_{\text{A-prime}} \cup A_{\text{ARIMA}})$$
+The complementarity metrics were computed across all 5 benchmark evaluation blocks (`Thursday-15-02-2018`, `Friday-16-02-2018`, `Wednesday-21-02-2018`, `UNSW Window Small Regime-Shift Block`, and `UNSW Window Regime Shift Demonstration`) using `experiments/run_stage2_gate_complementarity.py` and output to `results/v3_1/metrics/stage2_gate_complementarity.csv` and `.json`:
 
-### Status
-*(Pre-registered. Pending script execution. Results will be populated below.)*
+### Summary Table of Empirical Complementarity:
+| Evaluation Block | Design | Spearman $r_s$ | Jaccard Overlap $J$ | Recall A-prime | Recall ARIMA | Oracle-OR Recall | $\Delta \text{Recall}_{\text{Oracle}}$ | Oracle-OR FPR | Meets Pre-Registered Criterion? |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Thursday-15-02-2018** | Cross-Day Primary | 0.1623 | 0.0000 | 0.0000 | 0.0698 | 0.0698 | +0.0000 | 0.0000 | **NO** ($\Delta \text{Recall} < 0.10$) |
+| **Friday-16-02-2018** | Cross-Day Primary | 0.0267 | 0.0000 | 0.5532 | 0.0000 | 0.5532 | +0.0000 | 0.2917 | **NO** ($\text{FPR} > 0.05, \Delta \text{Recall} < 0.10$) |
+| **Wednesday-21-02-2018** | Cross-Day Primary | 0.4648 | 0.2632 | 0.2778 | 1.0000 | 1.0000 | +0.0000 | 0.0588 | **NO** ($\text{FPR} > 0.05, \Delta \text{Recall} < 0.10$) |
+| **UNSW Small Regime-Shift** | Window Block | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | +0.0000 | 1.0000 | **NO** ($\text{FPR} > 0.05, \Delta \text{Recall} < 0.10$) |
+| **UNSW Regime-Shift Demo** | Window Block | 0.0000 | 0.0000 | 0.0000 | 0.2278 | 0.2278 | +0.0000 | 0.0000 | **NO** ($\Delta \text{Recall} < 0.10$) |
+
+### Gate Decision
+- **Blocks Meeting Criterion:** **0 / 5 (0.0%)** (Required: $\ge 50\%$, i.e. $\ge 3/5$)
+- **Final Pre-Registered Decision:** **`NO-GO`**
+
+### Analysis of the NO-GO Result:
+1. **Zero Orthogonal Detection Gain ($\Delta \text{Recall} = 0.0000$ across all blocks):**
+   - On every block where one detector successfully flagged attacks (Friday for A-prime; Wednesday and UNSW Regime Shift Demo for ARIMA), the *other* detector either detected zero attacks or its alert set was a strict subset of the better detector.
+   - Consequently, forming an OR combiner did not add a single newly detected attack window over the best individual model.
+2. **False Positive Amplification:**
+   - Instead of improving recall, the OR combiner accumulated false alarms from both detectors. On Friday, combining A-prime and ARIMA inflated the test false positive rate from $0.2417$ (A-prime alone) and $0.0000$ (ARIMA alone) up to $0.2917$, violating the $\alpha = 0.05$ budget. On Wednesday, the combined FPR climbed to $0.0588$, violating the budget.
+3. **Implication for Stage 2:**
+   - Naive dual-stream fusion of A-prime and ARIMA is rejected. Stage 2 should not spend complexity on an OR/linear fusion scheme for these two detectors, as the empirical data proves it provides zero complementary coverage while worsening false alarms. Focus should remain on single-detector calibration (conformal thresholding) and reference library stability.
 
 ---
 
