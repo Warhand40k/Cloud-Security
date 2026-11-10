@@ -34,6 +34,10 @@ results/figures/*
 !results/v2/metrics/*.json
 !results/v2/figures/*.png
 !results/v2/predictions/*.parquet
+!docs/number_trace.csv
+!results/v4/
+!results/v4/**
+
 
 # Jupyter & checkpoints
 .ipynb_checkpoints/

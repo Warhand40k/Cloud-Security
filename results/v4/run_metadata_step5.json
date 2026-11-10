@@ -1,0 +1,46 @@
+{
+  "step": 5,
+  "description": "Number trace and reconciliation across paper/main.tex",
+  "git_commit": "f1edffdca227a8990cc2f99d27da4a6f2b54314e",
+  "branch": "stage4-verify",
+  "timestamp": "2026-11-11T04:48:30Z",
+  "hardware": {
+    "os": "Linux 6.6.137+rpt-rpi-2712",
+    "architecture": "aarch64",
+    "cpu_cores": 4,
+    "python_version": "3.12.13"
+  },
+  "package_versions": {
+    "numpy": "2.5.4",
+    "pandas": "3.1.1",
+    "scipy": "1.18.1",
+    "scikit-learn": "1.9.1",
+    "stumpy": "1.14.1"
+  },
+  "trace_summary": {
+    "total_claims_audited": 111,
+    "verified_claims": 86,
+    "discrepancies_resolved": 7,
+    "weakened_claims": 14,
+    "unsourced_claims": 4
+  },
+  "discrepancies_resolved": [
+    "Isolation Forest Wednesday F1: 0.9859 (validation F1-tuned cross-day baseline) vs 0.8780 (Stage 2 nominal alpha=0.05 calibration table)",
+    "Friday within-day training size: N = 45 (Stage 3.1 regularized gapless 60s windows) vs N = 26 (Stage 3 active-only compressed windows)",
+    "Base paper reported accuracy: 99.6% (Al-Mazrawe & Al-Musawi 2025 table) vs 99.8% (draft manuscript typo)",
+    "Figure 3 caption: claims 'zero false alarms' vs achieved 1.67% FPR (2 false alarms out of 120 benign test windows)",
+    "Figure 4 caption: mentions dynamic conformal thresholds tracking diurnal variation, but bottom panel plots normalized anomaly scores only (threshold curves omitted)"
+  ],
+  "unsourced_claims": [
+    "TRACE_108: 99.8% accuracy (base paper reported 99.6% accuracy)",
+    "TRACE_109: RPS in [10, 40] (measured server telemetry RPS is [0.23, 4.85])",
+    "TRACE_110: zero false alarms on Friday DoS-Hulk (actual test FPR is 1.67%, 2 false alarms)",
+    "TRACE_111: dynamic conformal thresholds plotted in Figure 4 (detector scores only are plotted)"
+  ],
+  "output_artifacts": [
+    "docs/number_trace.csv",
+    "docs/findings_v4.md (Section 9)",
+    "results/v4/run_metadata_step5.json"
+  ]
+}
+

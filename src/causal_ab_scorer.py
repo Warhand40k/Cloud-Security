@@ -20,7 +20,8 @@ from src.kneedle import find_knee_dimension
 def compute_multidimensional_ab_profile(
     A: np.ndarray,
     B: np.ndarray,
-    m: int
+    m: int,
+    normalize: bool = True
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Computes multidimensional Matrix Profile for series A with reference to B.
@@ -29,6 +30,7 @@ def compute_multidimensional_ab_profile(
         A: Evaluation series array of shape (T_A, D).
         B: Benign reference history array of shape (T_B, D).
         m: Subsequence window length.
+        normalize: Whether to z-normalize subsequences.
         
     Returns:
         mps: Combined multidimensional matrix profile array of shape (D, L_A),
@@ -48,7 +50,7 @@ def compute_multidimensional_ab_profile(
         col_B = np.ascontiguousarray(B[:, d], dtype=np.float64)
         
         # stumpy.stump with T_B computes distance from each subsequence in A to its NN in B
-        stump_out = stumpy.stump(T_A=col_A, m=m, T_B=col_B, ignore_trivial=False)
+        stump_out = stumpy.stump(T_A=col_A, m=m, T_B=col_B, ignore_trivial=False, normalize=normalize)
         per_dim_profiles[d, :] = stump_out[:, 0]
         
     # Multidimensional combination mirroring mSTAMP:
@@ -102,9 +104,10 @@ class CausalABScorer:
     Maintains a benign reference history B (fitted on training data).
     Scores any evaluation stream A causally with zero look-ahead bias.
     """
-    def __init__(self, m: int = 25, knee_dim: Optional[int] = None):
+    def __init__(self, m: int = 25, knee_dim: Optional[int] = None, normalize: bool = True):
         self.m = m
         self.knee_dim = knee_dim
+        self.normalize = normalize
         self.B_ref_ = None
         
     def fit(self, B: np.ndarray, kneedle_mps: Optional[np.ndarray] = None):
@@ -119,7 +122,7 @@ class CausalABScorer:
             else:
                 # Find knee on self-join of B
                 from src.matrix_profile import compute_multidimensional_mp
-                mps_B, _ = compute_multidimensional_mp(self.B_ref_, m=self.m)
+                mps_B, _ = compute_multidimensional_mp(self.B_ref_, m=self.m, normalize=self.normalize)
                 self.knee_dim, _ = find_knee_dimension(mps_B, online=True, metric="max")
         return self
 
@@ -132,7 +135,7 @@ class CausalABScorer:
             raise ValueError("CausalABScorer must be fitted with benign reference B before scoring.")
             
         A_arr = np.ascontiguousarray(A, dtype=np.float64)
-        mps, _ = compute_multidimensional_ab_profile(A=A_arr, B=self.B_ref_, m=self.m)
+        mps, _ = compute_multidimensional_ab_profile(A=A_arr, B=self.B_ref_, m=self.m, normalize=self.normalize)
         scores = compute_causal_point_scores(mps, knee_dim=self.knee_dim, n_samples=len(A_arr), m=self.m)
         return scores
 

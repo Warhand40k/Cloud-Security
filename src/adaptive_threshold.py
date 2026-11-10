@@ -303,30 +303,25 @@ class ConformalQuantileThreshold:
 
         return (test_scores >= thresh).astype(int)
 
-    def predict_rolling(
+    def predict_rolling_label_free(
         self,
         test_scores: np.ndarray,
         window_size: int = 60,
-        alpha: Optional[float] = None,
-        verified_benign_mask: Optional[np.ndarray] = None
+        alpha: Optional[float] = None
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Causal Rolling Conformal Thresholding.
-        At each time step t, threshold tau_t is calibrated on the most recent
-        window of calibration scores (initially seeded from cal_scores_).
+        Label-Free Autonomous Rolling Conformal Calibrator.
+        Strict production protocol: zero test-label leakage.
         
-        If verified_benign_mask is provided, only verified benign test scores enter
-        the rolling buffer (preventing attack poisoning).
-        
-        Returns:
-            (predictions, rolling_thresholds)
+        Buffer Admission Rule:
+            Admit test score s_t into rolling buffer if and only if unflagged (is_anomaly == 0).
+            Flagged instances (alerts) are quarantined to prevent attack buffer poisoning.
         """
         target_alpha = self.alpha if alpha is None else alpha
         n_test = len(test_scores)
         preds = np.zeros(n_test, dtype=int)
         thresholds = np.zeros(n_test, dtype=float)
 
-        # Initialize rolling buffer with initial calibration scores
         buffer = list(self.cal_scores_[-window_size:]) if self.n_cal_ > 0 else []
 
         for t in range(n_test):
@@ -348,7 +343,52 @@ class ConformalQuantileThreshold:
             is_anomaly = int(score_t >= cur_thresh)
             preds[t] = is_anomaly
 
-            # Buffer update logic:
+            # Label-free rule: buffer admits ONLY unflagged windows
+            if is_anomaly == 0:
+                buffer.append(score_t)
+                if len(buffer) > window_size:
+                    buffer.pop(0)
+
+        return preds, thresholds
+
+    def predict_rolling_oracle(
+        self,
+        test_scores: np.ndarray,
+        window_size: int = 60,
+        alpha: Optional[float] = None,
+        verified_benign_mask: Optional[np.ndarray] = None
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Oracle-Feedback Upper Bound Rolling Conformal Calibrator.
+        Requires external test-label feedback (y_test == 0) to admit true benign
+        windows and exclude attack windows regardless of detector alert state.
+        """
+        target_alpha = self.alpha if alpha is None else alpha
+        n_test = len(test_scores)
+        preds = np.zeros(n_test, dtype=int)
+        thresholds = np.zeros(n_test, dtype=float)
+
+        buffer = list(self.cal_scores_[-window_size:]) if self.n_cal_ > 0 else []
+
+        for t in range(n_test):
+            if len(buffer) < 10:
+                cur_thresh = self.threshold_
+            else:
+                buf_arr = np.sort(np.array(buffer))
+                n_b = len(buf_arr)
+                q_idx = int(np.ceil((n_b + 1) * (1.0 - target_alpha)))
+                q_idx = max(1, min(n_b, q_idx))
+                cur_thresh = float(buf_arr[q_idx - 1])
+                emp_far = float(np.mean(buf_arr >= cur_thresh))
+                if emp_far > target_alpha:
+                    higher = buf_arr[buf_arr > cur_thresh]
+                    cur_thresh = float(np.min(higher)) if len(higher) > 0 else cur_thresh + self.eps
+
+            thresholds[t] = cur_thresh
+            score_t = test_scores[t]
+            is_anomaly = int(score_t >= cur_thresh)
+            preds[t] = is_anomaly
+
             should_add = False
             if verified_benign_mask is not None:
                 should_add = bool(verified_benign_mask[t])
@@ -362,7 +402,86 @@ class ConformalQuantileThreshold:
 
         return preds, thresholds
 
-    def predict_aci(
+    def predict_rolling(
+        self,
+        test_scores: np.ndarray,
+        window_size: int = 60,
+        alpha: Optional[float] = None,
+        verified_benign_mask: Optional[np.ndarray] = None
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Rolling Split-Conformal Thresholding.
+        If verified_benign_mask is None: operates as Label-Free Autonomous Calibrator.
+        If verified_benign_mask is provided: operates as Oracle-Feedback Upper Bound.
+        """
+        if verified_benign_mask is not None:
+            return self.predict_rolling_oracle(
+                test_scores, window_size=window_size, alpha=alpha, verified_benign_mask=verified_benign_mask
+            )
+        return self.predict_rolling_label_free(
+            test_scores, window_size=window_size, alpha=alpha
+        )
+
+    def predict_aci_label_free(
+        self,
+        test_scores: np.ndarray,
+        gamma: float = 0.01,
+        window_size: int = 60,
+        alpha: Optional[float] = None
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Label-Free Autonomous Adaptive Conformal Inference (ACI; Gibbs & Candès 2021).
+        Strict production protocol: zero test-label leakage.
+        
+        Rules:
+            1. err_t is evaluated from alerts directly: err_t = float(is_anomaly).
+               Any alert is penalized as an empirical error against budget alpha.
+            2. Buffer admission: admits ONLY unflagged windows (is_anomaly == 0).
+               Flagged windows are quarantined so attack scores cannot poison the buffer.
+        """
+        target_alpha = self.alpha if alpha is None else alpha
+        n_test = len(test_scores)
+        preds = np.zeros(n_test, dtype=int)
+        thresholds = np.zeros(n_test, dtype=float)
+        adapted_alphas = np.zeros(n_test, dtype=float)
+
+        alpha_t = target_alpha
+        buffer = list(self.cal_scores_[-window_size:]) if self.n_cal_ > 0 else []
+
+        for t in range(n_test):
+            adapted_alphas[t] = alpha_t
+
+            if len(buffer) < 10:
+                cur_thresh = self.threshold_
+            else:
+                buf_arr = np.sort(np.array(buffer))
+                n_b = len(buf_arr)
+                q_idx = int(np.ceil((n_b + 1) * (1.0 - alpha_t)))
+                q_idx = max(1, min(n_b, q_idx))
+                cur_thresh = float(buf_arr[q_idx - 1])
+                emp_far = float(np.mean(buf_arr >= cur_thresh))
+                if emp_far > alpha_t:
+                    higher = buf_arr[buf_arr > cur_thresh]
+                    cur_thresh = float(np.min(higher)) if len(higher) > 0 else cur_thresh + self.eps
+
+            thresholds[t] = cur_thresh
+            score_t = test_scores[t]
+            is_anomaly = int(score_t >= cur_thresh)
+            preds[t] = is_anomaly
+
+            # ACI error from alert state:
+            err_t = float(is_anomaly)
+            alpha_t = float(np.clip(alpha_t + gamma * (target_alpha - err_t), 0.001, 0.50))
+
+            # Buffer admission: unflagged only
+            if is_anomaly == 0:
+                buffer.append(score_t)
+                if len(buffer) > window_size:
+                    buffer.pop(0)
+
+        return preds, thresholds, adapted_alphas
+
+    def predict_aci_oracle(
         self,
         test_scores: np.ndarray,
         gamma: float = 0.01,
@@ -371,13 +490,9 @@ class ConformalQuantileThreshold:
         verified_benign_mask: Optional[np.ndarray] = None
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
-        Adaptive Conformal Inference (ACI; Gibbs & Candès 2021).
-        Dynamically adjusts the nominal risk alpha_t based on past coverage errors:
-            alpha_{t+1} = alpha_t + gamma * (alpha - err_t)
-        where err_t = 1 if false alarm, 0 otherwise (on benign points).
-        
-        Returns:
-            (predictions, rolling_thresholds, adapted_alphas)
+        Oracle-Feedback Upper Bound ACI Calibrator.
+        Requires external test-label feedback (y_test == 0) to compute coverage error
+        strictly on benign windows and admit only ground-truth benign scores into buffer.
         """
         target_alpha = self.alpha if alpha is None else alpha
         n_test = len(test_scores)
@@ -421,3 +536,24 @@ class ConformalQuantileThreshold:
                     buffer.pop(0)
 
         return preds, thresholds, adapted_alphas
+
+    def predict_aci(
+        self,
+        test_scores: np.ndarray,
+        gamma: float = 0.01,
+        window_size: int = 60,
+        alpha: Optional[float] = None,
+        verified_benign_mask: Optional[np.ndarray] = None
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Adaptive Conformal Inference (ACI; Gibbs & Candès 2021).
+        If verified_benign_mask is None: operates as Label-Free Autonomous Calibrator.
+        If verified_benign_mask is provided: operates as Oracle-Feedback Upper Bound.
+        """
+        if verified_benign_mask is not None:
+            return self.predict_aci_oracle(
+                test_scores, gamma=gamma, window_size=window_size, alpha=alpha, verified_benign_mask=verified_benign_mask
+            )
+        return self.predict_aci_label_free(
+            test_scores, gamma=gamma, window_size=window_size, alpha=alpha
+        )
