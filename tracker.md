@@ -20,7 +20,8 @@
 | **Phase 6** | Comprehensive Evaluation (ML, SRE, Configs & Gap Decision) | ✅ Completed | 100% |
 | **Stage 1.5** | Foundation Repairs (Time-Axis, Reference Sizing, Saturation Diagnosis) | ✅ Completed | 100% |
 | **Stage 2** | Positive Contribution: Split-Conformal & Adaptive Thresholding | ✅ Completed | 100% |
-| **Phase 7** | Research Paper Draft & Presentation Deliverables | 🔄 In Progress | 45% |
+| **Stage 3** | Bounded Testbed Validation (Live Microservice, 25 Campaigns, Flash Crowds) | ✅ Completed | 100% |
+| **Phase 7** | Research Paper Draft & Presentation Deliverables | 🔄 In Progress | 55% |
 
 ---
 
@@ -151,6 +152,21 @@
 - [x] Demonstrated boost in top detectors ($F_1: 0.8624 \to 0.9792$ on Friday Hulk; $F_1: 0.9863 \to 1.0000$ on Wednesday LOIC)
 - [x] Generated publication figures in `results/v3_2/figures/`
 - [x] Compiled comprehensive Stage 2 report in `docs/stage2_conformal_results.md`
+
+---
+
+### Stage 3: Bounded Testbed Validation (Live Microservice, Diurnal Load & Flash Crowds)
+- [x] Implemented live e-commerce microservice with Prometheus `/metrics` exposition (`testbed/app.py`)
+- [x] Built Locust benign load generator with diurnal sinusoidal traffic shape (`testbed/locustfile.py`)
+- [x] Implemented strictly confined local attacker targeting `127.0.0.1` (`testbed/attacker.py`)
+- [x] Created Docker Compose multi-container setup with isolated internal bridge network (`testbed/docker-compose.yml`)
+- [x] Scheduled 25 labeled operational campaigns (floods, slowloris, pulsing spikes, recon scans, and benign flash crowds) across 600 windows (10h simulated)
+- [x] Collected and persisted 60-second window telemetry to `data/testbed/testbed_60s_regular.parquet`
+- [x] Executed frozen detection pipeline (Config A, A-prime, Isolation Forest, ARIMA, Conformal Thresholds) on testbed data (`experiments/run_stage3_testbed_evaluation.py`)
+- [x] Evaluated flash crowd discrimination: proved rolling conformal calibration slashed flash crowd false alarms from 100% to 11.4%
+- [x] Replicated matrix profile collapse on live microservice telemetry (reproducing Stage 1.5 findings)
+- [x] Generated publication validation figures in `results/v3_3/figures/`
+- [x] Compiled comprehensive Stage 3 validation report in `docs/stage3_testbed_validation.md`
 
 ---
 

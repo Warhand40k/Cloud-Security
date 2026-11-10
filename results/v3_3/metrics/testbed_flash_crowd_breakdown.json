@@ -1,0 +1,722 @@
+[
+  {
+    "Model":"Baseline: Isolation Forest",
+    "Method":"Static Benign Quantile",
+    "Campaign_Type":"volumetric_flood",
+    "Total_Windows":40,
+    "Alert_Windows":40,
+    "Alert_Rate":1.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: Isolation Forest",
+    "Method":"Static Benign Quantile",
+    "Campaign_Type":"slowloris",
+    "Total_Windows":36,
+    "Alert_Windows":33,
+    "Alert_Rate":0.9166666667,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: Isolation Forest",
+    "Method":"Static Benign Quantile",
+    "Campaign_Type":"intermittent_spike",
+    "Total_Windows":29,
+    "Alert_Windows":29,
+    "Alert_Rate":1.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: Isolation Forest",
+    "Method":"Static Benign Quantile",
+    "Campaign_Type":"endpoint_recon",
+    "Total_Windows":31,
+    "Alert_Windows":31,
+    "Alert_Rate":1.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: Isolation Forest",
+    "Method":"Static Benign Quantile",
+    "Campaign_Type":"flash_crowd",
+    "Total_Windows":35,
+    "Alert_Windows":35,
+    "Alert_Rate":1.0,
+    "Is_Attack":0
+  },
+  {
+    "Model":"Baseline: Isolation Forest",
+    "Method":"Static Split-Conformal",
+    "Campaign_Type":"volumetric_flood",
+    "Total_Windows":40,
+    "Alert_Windows":40,
+    "Alert_Rate":1.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: Isolation Forest",
+    "Method":"Static Split-Conformal",
+    "Campaign_Type":"slowloris",
+    "Total_Windows":36,
+    "Alert_Windows":33,
+    "Alert_Rate":0.9166666667,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: Isolation Forest",
+    "Method":"Static Split-Conformal",
+    "Campaign_Type":"intermittent_spike",
+    "Total_Windows":29,
+    "Alert_Windows":29,
+    "Alert_Rate":1.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: Isolation Forest",
+    "Method":"Static Split-Conformal",
+    "Campaign_Type":"endpoint_recon",
+    "Total_Windows":31,
+    "Alert_Windows":31,
+    "Alert_Rate":1.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: Isolation Forest",
+    "Method":"Static Split-Conformal",
+    "Campaign_Type":"flash_crowd",
+    "Total_Windows":35,
+    "Alert_Windows":35,
+    "Alert_Rate":1.0,
+    "Is_Attack":0
+  },
+  {
+    "Model":"Baseline: Isolation Forest",
+    "Method":"Rolling Split-Conformal",
+    "Campaign_Type":"volumetric_flood",
+    "Total_Windows":40,
+    "Alert_Windows":40,
+    "Alert_Rate":1.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: Isolation Forest",
+    "Method":"Rolling Split-Conformal",
+    "Campaign_Type":"slowloris",
+    "Total_Windows":36,
+    "Alert_Windows":30,
+    "Alert_Rate":0.8333333333,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: Isolation Forest",
+    "Method":"Rolling Split-Conformal",
+    "Campaign_Type":"intermittent_spike",
+    "Total_Windows":29,
+    "Alert_Windows":28,
+    "Alert_Rate":0.9655172414,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: Isolation Forest",
+    "Method":"Rolling Split-Conformal",
+    "Campaign_Type":"endpoint_recon",
+    "Total_Windows":31,
+    "Alert_Windows":31,
+    "Alert_Rate":1.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: Isolation Forest",
+    "Method":"Rolling Split-Conformal",
+    "Campaign_Type":"flash_crowd",
+    "Total_Windows":35,
+    "Alert_Windows":4,
+    "Alert_Rate":0.1142857143,
+    "Is_Attack":0
+  },
+  {
+    "Model":"Baseline: Isolation Forest",
+    "Method":"Adaptive Conformal (ACI)",
+    "Campaign_Type":"volumetric_flood",
+    "Total_Windows":40,
+    "Alert_Windows":40,
+    "Alert_Rate":1.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: Isolation Forest",
+    "Method":"Adaptive Conformal (ACI)",
+    "Campaign_Type":"slowloris",
+    "Total_Windows":36,
+    "Alert_Windows":28,
+    "Alert_Rate":0.7777777778,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: Isolation Forest",
+    "Method":"Adaptive Conformal (ACI)",
+    "Campaign_Type":"intermittent_spike",
+    "Total_Windows":29,
+    "Alert_Windows":17,
+    "Alert_Rate":0.5862068966,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: Isolation Forest",
+    "Method":"Adaptive Conformal (ACI)",
+    "Campaign_Type":"endpoint_recon",
+    "Total_Windows":31,
+    "Alert_Windows":31,
+    "Alert_Rate":1.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: Isolation Forest",
+    "Method":"Adaptive Conformal (ACI)",
+    "Campaign_Type":"flash_crowd",
+    "Total_Windows":35,
+    "Alert_Windows":4,
+    "Alert_Rate":0.1142857143,
+    "Is_Attack":0
+  },
+  {
+    "Model":"Baseline: ARIMA Residual",
+    "Method":"Static Benign Quantile",
+    "Campaign_Type":"volumetric_flood",
+    "Total_Windows":40,
+    "Alert_Windows":40,
+    "Alert_Rate":1.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: ARIMA Residual",
+    "Method":"Static Benign Quantile",
+    "Campaign_Type":"slowloris",
+    "Total_Windows":36,
+    "Alert_Windows":33,
+    "Alert_Rate":0.9166666667,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: ARIMA Residual",
+    "Method":"Static Benign Quantile",
+    "Campaign_Type":"intermittent_spike",
+    "Total_Windows":29,
+    "Alert_Windows":29,
+    "Alert_Rate":1.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: ARIMA Residual",
+    "Method":"Static Benign Quantile",
+    "Campaign_Type":"endpoint_recon",
+    "Total_Windows":31,
+    "Alert_Windows":31,
+    "Alert_Rate":1.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: ARIMA Residual",
+    "Method":"Static Benign Quantile",
+    "Campaign_Type":"flash_crowd",
+    "Total_Windows":35,
+    "Alert_Windows":35,
+    "Alert_Rate":1.0,
+    "Is_Attack":0
+  },
+  {
+    "Model":"Baseline: ARIMA Residual",
+    "Method":"Static Split-Conformal",
+    "Campaign_Type":"volumetric_flood",
+    "Total_Windows":40,
+    "Alert_Windows":40,
+    "Alert_Rate":1.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: ARIMA Residual",
+    "Method":"Static Split-Conformal",
+    "Campaign_Type":"slowloris",
+    "Total_Windows":36,
+    "Alert_Windows":33,
+    "Alert_Rate":0.9166666667,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: ARIMA Residual",
+    "Method":"Static Split-Conformal",
+    "Campaign_Type":"intermittent_spike",
+    "Total_Windows":29,
+    "Alert_Windows":29,
+    "Alert_Rate":1.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: ARIMA Residual",
+    "Method":"Static Split-Conformal",
+    "Campaign_Type":"endpoint_recon",
+    "Total_Windows":31,
+    "Alert_Windows":31,
+    "Alert_Rate":1.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: ARIMA Residual",
+    "Method":"Static Split-Conformal",
+    "Campaign_Type":"flash_crowd",
+    "Total_Windows":35,
+    "Alert_Windows":35,
+    "Alert_Rate":1.0,
+    "Is_Attack":0
+  },
+  {
+    "Model":"Baseline: ARIMA Residual",
+    "Method":"Rolling Split-Conformal",
+    "Campaign_Type":"volumetric_flood",
+    "Total_Windows":40,
+    "Alert_Windows":40,
+    "Alert_Rate":1.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: ARIMA Residual",
+    "Method":"Rolling Split-Conformal",
+    "Campaign_Type":"slowloris",
+    "Total_Windows":36,
+    "Alert_Windows":30,
+    "Alert_Rate":0.8333333333,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: ARIMA Residual",
+    "Method":"Rolling Split-Conformal",
+    "Campaign_Type":"intermittent_spike",
+    "Total_Windows":29,
+    "Alert_Windows":29,
+    "Alert_Rate":1.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: ARIMA Residual",
+    "Method":"Rolling Split-Conformal",
+    "Campaign_Type":"endpoint_recon",
+    "Total_Windows":31,
+    "Alert_Windows":31,
+    "Alert_Rate":1.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: ARIMA Residual",
+    "Method":"Rolling Split-Conformal",
+    "Campaign_Type":"flash_crowd",
+    "Total_Windows":35,
+    "Alert_Windows":7,
+    "Alert_Rate":0.2,
+    "Is_Attack":0
+  },
+  {
+    "Model":"Baseline: ARIMA Residual",
+    "Method":"Adaptive Conformal (ACI)",
+    "Campaign_Type":"volumetric_flood",
+    "Total_Windows":40,
+    "Alert_Windows":40,
+    "Alert_Rate":1.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: ARIMA Residual",
+    "Method":"Adaptive Conformal (ACI)",
+    "Campaign_Type":"slowloris",
+    "Total_Windows":36,
+    "Alert_Windows":26,
+    "Alert_Rate":0.7222222222,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: ARIMA Residual",
+    "Method":"Adaptive Conformal (ACI)",
+    "Campaign_Type":"intermittent_spike",
+    "Total_Windows":29,
+    "Alert_Windows":29,
+    "Alert_Rate":1.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: ARIMA Residual",
+    "Method":"Adaptive Conformal (ACI)",
+    "Campaign_Type":"endpoint_recon",
+    "Total_Windows":31,
+    "Alert_Windows":31,
+    "Alert_Rate":1.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Baseline: ARIMA Residual",
+    "Method":"Adaptive Conformal (ACI)",
+    "Campaign_Type":"flash_crowd",
+    "Total_Windows":35,
+    "Alert_Windows":5,
+    "Alert_Rate":0.1428571429,
+    "Is_Attack":0
+  },
+  {
+    "Model":"Config A (mSTAMP+Kneedle)",
+    "Method":"Static Benign Quantile",
+    "Campaign_Type":"volumetric_flood",
+    "Total_Windows":40,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A (mSTAMP+Kneedle)",
+    "Method":"Static Benign Quantile",
+    "Campaign_Type":"slowloris",
+    "Total_Windows":36,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A (mSTAMP+Kneedle)",
+    "Method":"Static Benign Quantile",
+    "Campaign_Type":"intermittent_spike",
+    "Total_Windows":29,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A (mSTAMP+Kneedle)",
+    "Method":"Static Benign Quantile",
+    "Campaign_Type":"endpoint_recon",
+    "Total_Windows":31,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A (mSTAMP+Kneedle)",
+    "Method":"Static Benign Quantile",
+    "Campaign_Type":"flash_crowd",
+    "Total_Windows":35,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":0
+  },
+  {
+    "Model":"Config A (mSTAMP+Kneedle)",
+    "Method":"Static Split-Conformal",
+    "Campaign_Type":"volumetric_flood",
+    "Total_Windows":40,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A (mSTAMP+Kneedle)",
+    "Method":"Static Split-Conformal",
+    "Campaign_Type":"slowloris",
+    "Total_Windows":36,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A (mSTAMP+Kneedle)",
+    "Method":"Static Split-Conformal",
+    "Campaign_Type":"intermittent_spike",
+    "Total_Windows":29,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A (mSTAMP+Kneedle)",
+    "Method":"Static Split-Conformal",
+    "Campaign_Type":"endpoint_recon",
+    "Total_Windows":31,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A (mSTAMP+Kneedle)",
+    "Method":"Static Split-Conformal",
+    "Campaign_Type":"flash_crowd",
+    "Total_Windows":35,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":0
+  },
+  {
+    "Model":"Config A (mSTAMP+Kneedle)",
+    "Method":"Rolling Split-Conformal",
+    "Campaign_Type":"volumetric_flood",
+    "Total_Windows":40,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A (mSTAMP+Kneedle)",
+    "Method":"Rolling Split-Conformal",
+    "Campaign_Type":"slowloris",
+    "Total_Windows":36,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A (mSTAMP+Kneedle)",
+    "Method":"Rolling Split-Conformal",
+    "Campaign_Type":"intermittent_spike",
+    "Total_Windows":29,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A (mSTAMP+Kneedle)",
+    "Method":"Rolling Split-Conformal",
+    "Campaign_Type":"endpoint_recon",
+    "Total_Windows":31,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A (mSTAMP+Kneedle)",
+    "Method":"Rolling Split-Conformal",
+    "Campaign_Type":"flash_crowd",
+    "Total_Windows":35,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":0
+  },
+  {
+    "Model":"Config A (mSTAMP+Kneedle)",
+    "Method":"Adaptive Conformal (ACI)",
+    "Campaign_Type":"volumetric_flood",
+    "Total_Windows":40,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A (mSTAMP+Kneedle)",
+    "Method":"Adaptive Conformal (ACI)",
+    "Campaign_Type":"slowloris",
+    "Total_Windows":36,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A (mSTAMP+Kneedle)",
+    "Method":"Adaptive Conformal (ACI)",
+    "Campaign_Type":"intermittent_spike",
+    "Total_Windows":29,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A (mSTAMP+Kneedle)",
+    "Method":"Adaptive Conformal (ACI)",
+    "Campaign_Type":"endpoint_recon",
+    "Total_Windows":31,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A (mSTAMP+Kneedle)",
+    "Method":"Adaptive Conformal (ACI)",
+    "Campaign_Type":"flash_crowd",
+    "Total_Windows":35,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":0
+  },
+  {
+    "Model":"Config A-prime (Causal AB)",
+    "Method":"Static Benign Quantile",
+    "Campaign_Type":"volumetric_flood",
+    "Total_Windows":40,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A-prime (Causal AB)",
+    "Method":"Static Benign Quantile",
+    "Campaign_Type":"slowloris",
+    "Total_Windows":36,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A-prime (Causal AB)",
+    "Method":"Static Benign Quantile",
+    "Campaign_Type":"intermittent_spike",
+    "Total_Windows":29,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A-prime (Causal AB)",
+    "Method":"Static Benign Quantile",
+    "Campaign_Type":"endpoint_recon",
+    "Total_Windows":31,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A-prime (Causal AB)",
+    "Method":"Static Benign Quantile",
+    "Campaign_Type":"flash_crowd",
+    "Total_Windows":35,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":0
+  },
+  {
+    "Model":"Config A-prime (Causal AB)",
+    "Method":"Static Split-Conformal",
+    "Campaign_Type":"volumetric_flood",
+    "Total_Windows":40,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A-prime (Causal AB)",
+    "Method":"Static Split-Conformal",
+    "Campaign_Type":"slowloris",
+    "Total_Windows":36,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A-prime (Causal AB)",
+    "Method":"Static Split-Conformal",
+    "Campaign_Type":"intermittent_spike",
+    "Total_Windows":29,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A-prime (Causal AB)",
+    "Method":"Static Split-Conformal",
+    "Campaign_Type":"endpoint_recon",
+    "Total_Windows":31,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A-prime (Causal AB)",
+    "Method":"Static Split-Conformal",
+    "Campaign_Type":"flash_crowd",
+    "Total_Windows":35,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":0
+  },
+  {
+    "Model":"Config A-prime (Causal AB)",
+    "Method":"Rolling Split-Conformal",
+    "Campaign_Type":"volumetric_flood",
+    "Total_Windows":40,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A-prime (Causal AB)",
+    "Method":"Rolling Split-Conformal",
+    "Campaign_Type":"slowloris",
+    "Total_Windows":36,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A-prime (Causal AB)",
+    "Method":"Rolling Split-Conformal",
+    "Campaign_Type":"intermittent_spike",
+    "Total_Windows":29,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A-prime (Causal AB)",
+    "Method":"Rolling Split-Conformal",
+    "Campaign_Type":"endpoint_recon",
+    "Total_Windows":31,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A-prime (Causal AB)",
+    "Method":"Rolling Split-Conformal",
+    "Campaign_Type":"flash_crowd",
+    "Total_Windows":35,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":0
+  },
+  {
+    "Model":"Config A-prime (Causal AB)",
+    "Method":"Adaptive Conformal (ACI)",
+    "Campaign_Type":"volumetric_flood",
+    "Total_Windows":40,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A-prime (Causal AB)",
+    "Method":"Adaptive Conformal (ACI)",
+    "Campaign_Type":"slowloris",
+    "Total_Windows":36,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A-prime (Causal AB)",
+    "Method":"Adaptive Conformal (ACI)",
+    "Campaign_Type":"intermittent_spike",
+    "Total_Windows":29,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A-prime (Causal AB)",
+    "Method":"Adaptive Conformal (ACI)",
+    "Campaign_Type":"endpoint_recon",
+    "Total_Windows":31,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":1
+  },
+  {
+    "Model":"Config A-prime (Causal AB)",
+    "Method":"Adaptive Conformal (ACI)",
+    "Campaign_Type":"flash_crowd",
+    "Total_Windows":35,
+    "Alert_Windows":0,
+    "Alert_Rate":0.0,
+    "Is_Attack":0
+  }
+]

@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  microservice:
+    build:
+      context: ..
+      dockerfile: testbed/Dockerfile.app
+    container_name: testbed_microservice
+    ports:
+      - "8088:8088"
+    networks:
+      - isolated_testbed_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8088/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  locust-loadgen:
+    build:
+      context: ..
+      dockerfile: testbed/Dockerfile.locust
+    container_name: testbed_locust
+    depends_on:
+      microservice:
+        condition: service_healthy
+    networks:
+      - isolated_testbed_net
+    environment:
+      - TARGET_URL=http://microservice:8088
+
+  attacker:
+    build:
+      context: ..
+      dockerfile: testbed/Dockerfile.attacker
+    container_name: testbed_attacker
+    depends_on:
+      microservice:
+        condition: service_healthy
+    networks:
+      - isolated_testbed_net
+    environment:
+      - TARGET_HOST=microservice
+      - TARGET_PORT=8088
+
+networks:
+  isolated_testbed_net:
+    driver: bridge
+    internal: true  # STRICT SECURITY: strictly isolated local network, zero external internet routing

@@ -1,0 +1,8 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+RUN pip install --no-cache-dir locust requests
+
+COPY testbed/locustfile.py /app/locustfile.py
+
+CMD ["locust", "-f", "/app/locustfile.py", "--headless", "-H", "http://microservice:8088", "--run-time", "600s"]

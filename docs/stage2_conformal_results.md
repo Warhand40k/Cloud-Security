@@ -143,3 +143,4 @@ The table below contrasts the Static Baseline against Rolling Conformal and ACI 
   - False alarm rate control: [`results/v3_2/figures/conformal_fpr_control_alpha05.png`](file:///home/amal/Hardcore/courses/cloudSRE&Security/project/results/v3_2/figures/conformal_fpr_control_alpha05.png)
   - Trade-off curves ($F_1$ vs FPR): [`results/v3_2/figures/conformal_f1_vs_fpr.png`](file:///home/amal/Hardcore/courses/cloudSRE&Security/project/results/v3_2/figures/conformal_f1_vs_fpr.png)
   - Dynamic tracking time series: [`results/v3_2/figures/conformal_rolling_thresholds_friday.png`](file:///home/amal/Hardcore/courses/cloudSRE&Security/project/results/v3_2/figures/conformal_rolling_thresholds_friday.png)
+
