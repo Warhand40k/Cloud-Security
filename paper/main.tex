@@ -245,18 +245,22 @@ Config A-prime ($m=5$) & Static Benign Quantile & 0.0000 & 0.0000 & 0.0000 & 0.0
 \caption{10-hour telemetry timeline on the live microservice testbed (600 windows). Top: transaction volume and latency under diurnal Locust load with 25 labeled attacks and 5 flash crowds. Middle: Prometheus error rates and byte ingress. Bottom: detector anomaly scores and dynamic conformal thresholds tracking diurnal variation.}\label{fig:testbed_timeline}
 \end{figure*}
 
-\subsection{Flash Crowd Vulnerability \& Resolution}
-Table~\ref{tab:testbed_results} and Figure~\ref{fig:testbed_timeline} present the performance of the frozen pipeline on the live testbed. A critical vulnerability was uncovered: \textbf{static thresholds suffered a 100.0\% false alarm rate during benign flash crowds (35 / 35 flash crowd windows incorrectly flagged as cyberattacks)}. Because static thresholds rely on fixed historical bounds, volumetric surges caused by legitimate user interest trigger severe alert storms ($> 35$ alerts/hour).
-
 \begin{figure*}[t]
 \centering
 \includegraphics[width=0.82\textwidth]{assets/testbed_campaign_type_recall.png}
 \caption{Detection recall across attack campaign types and false positive rates during benign flash crowds. Static thresholds trigger 100\% false alarms on flash crowds, whereas rolling conformal calibration eliminates 88.6\% of flash crowd alarms while preserving high attack recall with exact percentages annotated.}\label{fig:testbed_campaign_recall}
 \end{figure*}
 
+\newpage
+
+\subsection{Flash Crowd Vulnerability \& Resolution}
+Table~\ref{tab:testbed_results} and Figure~\ref{fig:testbed_timeline} present the performance of the frozen pipeline on the live testbed. A critical vulnerability was uncovered: \textbf{static thresholds suffered a 100.0\% false alarm rate during benign flash crowds (35 / 35 flash crowd windows incorrectly flagged as cyberattacks)}. Because static thresholds rely on fixed historical bounds, volumetric surges caused by legitimate user interest trigger severe alert storms ($> 35$ alerts/hour).
+
 In contrast, Rolling Conformal calibration adapted to legitimate baseline increases, slashing flash crowd false alarms to \textbf{11.43\% (4 / 35)}---an 88.6\% reduction. For Isolation Forest, this lifted Precision from 0.7557 to 0.9416 and test $F_1$ from 0.8526 to \textbf{0.9451}, while maintaining \textbf{100\% campaign recall} across all volumetric attacks (Figure~\ref{fig:testbed_campaign_recall}). ARIMA Residual achieved similar gains, reaching $F_1 = 0.9353$ with 100\% campaign recall.
 
 Concurrently, Config A and Config A-prime collapsed completely (ROC-AUC 0.5000, $F_1 = 0.0000$), directly replicating the failure of matrix profiles observed on benchmark flow data.
+
+\newpage
 
 \section{Discussion \& SRE Operational Guidelines}
 In cloud SRE deployments, alert fatigue represents the primary failure mode of automated intrusion systems. Based on our empirical findings across benchmarks and live testbed telemetry, we propose three operational guidelines:
@@ -266,10 +270,10 @@ In cloud SRE deployments, alert fatigue represents the primary failure mode of a
     \item \textbf{Enforce Minimum Reference Capacity ($N \ge 100$):} Operators must provide adequate training windows to prevent model starvation and catastrophic ranking reversals.
 \end{enumerate}
 
-\noindent\begin{minipage}{\columnwidth}
+\newpage
+
 \section{Conclusion}
 This study presented a rigorous reproduction, causal extension, and methodological audit of the mSTAMP + Kneedle anomaly detection pipeline. We demonstrated that published near-perfect detection numbers depend on unstated operational assumptions and compressed time axes. On continuous multi-block flow benchmarks and live microservice telemetry, matrix profiles fail to outperform simple baselines. Split-conformal and adaptive thresholding provides mathematically grounded false alarm control, resolving the flash crowd vulnerability and providing a reliable foundation for cloud telemetry monitoring.
-\end{minipage}
 
 % Flush all pending floating figures and tables before starting references
 \clearpage
