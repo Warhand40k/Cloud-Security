@@ -1,0 +1,19 @@
+Dataset,Block,Partition,Index_Range,Start_Timestamp,End_Timestamp,Elapsed_Hours,Total_Units,Unit_Type,Attack_Units,Prevalence,Campaigns,Role
+CSE-CIC-IDS2018,Thursday-15-02-2018,Train,"[0, 250]",2018-02-15 01:00:00,2018-02-15 05:09:00,4.17,250,windows (60s),0,0.0,0,Pure Benign Reference
+CSE-CIC-IDS2018,Thursday-15-02-2018,Val,"[250, 558]",2018-02-15 05:10:00,2018-02-15 10:17:00,5.13,308,windows (60s),19,6.17,4,Threshold Calibration
+CSE-CIC-IDS2018,Thursday-15-02-2018,Test,"[558, 720]",2018-02-15 10:18:00,2018-02-15 12:59:00,2.7,162,windows (60s),43,26.54,1,Held-Out Test Evaluation
+CSE-CIC-IDS2018,Friday-16-02-2018,Train,"[0, 45]",2018-02-16 01:00:00,2018-02-16 01:44:00,0.75,45,windows (60s),0,0.0,0,Pure Benign Reference
+CSE-CIC-IDS2018,Friday-16-02-2018,Val,"[45, 552]",2018-02-16 01:45:00,2018-02-16 10:11:00,8.45,507,windows (60s),4,0.79,1,Threshold Calibration
+CSE-CIC-IDS2018,Friday-16-02-2018,Test,"[552, 719]",2018-02-16 10:12:00,2018-02-16 12:58:00,2.78,167,windows (60s),47,28.14,1,Held-Out Test Evaluation
+CSE-CIC-IDS2018,Wednesday-21-02-2018,Train,"[0, 16]",2018-02-21 01:55:00,2018-02-21 02:10:00,0.27,16,windows (60s),0,0.0,0,Pure Benign Reference
+CSE-CIC-IDS2018,Wednesday-21-02-2018,Val,"[16, 459]",2018-02-21 02:11:00,2018-02-21 09:33:00,7.38,443,windows (60s),23,5.19,1,Threshold Calibration
+CSE-CIC-IDS2018,Wednesday-21-02-2018,Test,"[459, 529]",2018-02-21 09:34:00,2018-02-21 10:43:00,1.17,70,windows (60s),36,51.43,1,Held-Out Test Evaluation
+UNSW-NB15,UNSW Window Small Regime-Shift Block,Train,"[2000, 4000]",2015-01-22 17:23:10,2015-01-22 23:10:30,5.79,2000,windows (10s),0,0.0,0,Pure Benign Reference
+UNSW-NB15,UNSW Window Small Regime-Shift Block,Val,"[4000, 4470]",2015-01-22 23:10:40,2015-02-18 00:29:00,625.31,470,windows (10s),5,1.06,4,Threshold Calibration (Straddles Boundary)
+UNSW-NB15,UNSW Window Small Regime-Shift Block,Test,"[4470, 4535]",2015-02-18 00:29:10,2015-02-18 00:45:00,0.27,65,windows (10s),45,69.23,1,Held-Out Test (Regime-Shift)
+UNSW-NB15,UNSW Window Regime Shift Demonstration,Train,"[1200, 3200]",2015-01-22 15:09:50,2015-01-22 20:57:10,5.79,2000,windows (10s),0,0.0,0,Pure Benign Reference
+UNSW-NB15,UNSW Window Regime Shift Demonstration,Val,"[3200, 4600]",2015-01-22 20:57:20,2015-02-18 01:14:20,628.29,1400,windows (10s),115,8.21,5,Threshold Calibration (Straddles Boundary)
+UNSW-NB15,UNSW Window Regime Shift Demonstration,Test,"[4600, 5800]",2015-02-18 01:14:30,2015-02-18 04:34:20,3.33,1200,windows (10s),1194,99.5,4,Held-Out Test (Regime-Shift)
+UNSW-NB15,UNSW Flow Contiguous Block,Train,"[0, 4800]",2015-01-22 11:49:37,2015-01-22 11:53:06,0.0581,4800,flows,184,3.83,160,"Filtered Benign Reference (4,616 Normal)"
+UNSW-NB15,UNSW Flow Contiguous Block,Val,"[4800, 6400]",2015-01-22 11:53:06,2015-01-22 11:54:17,0.0197,1600,flows,108,6.75,69,Threshold Calibration
+UNSW-NB15,UNSW Flow Contiguous Block,Test,"[6400, 8000]",2015-01-22 11:54:17,2015-01-22 11:55:25,0.0189,1600,flows,187,11.69,88,Held-Out Test Evaluation

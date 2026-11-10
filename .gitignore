@@ -6,14 +6,7 @@ __pycache__/
 env/
 venv/
 
-# Data & Models
-data/raw/
-data/processed/
-*.parquet
-*.csv
-*.pcap
-*.zip
-*.tar.gz
+
 
 # Results & outputs
 results/metrics/*

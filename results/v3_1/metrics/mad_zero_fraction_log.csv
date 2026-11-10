@@ -1,0 +1,19 @@
+Block,Design,Alpha,Chosen_Multiplier_C,Zero_MAD_Fraction
+Thursday-15-02-2018,Cross-Day Primary,0.05,2.0,0.006172839506172839
+Thursday-15-02-2018,Cross-Day Primary,0.01,5.0,0.006172839506172839
+Friday-16-02-2018,Cross-Day Primary,0.05,4.5,0.011976047904191617
+Friday-16-02-2018,Cross-Day Primary,0.01,5.0,0.011976047904191617
+Wednesday-21-02-2018,Cross-Day Primary,0.05,1.0,0.02857142857142857
+Wednesday-21-02-2018,Cross-Day Primary,0.01,5.0,0.02857142857142857
+Thursday-15-02-2018,Within-Day Sensitivity,0.05,2.0,0.006172839506172839
+Thursday-15-02-2018,Within-Day Sensitivity,0.01,5.0,0.006172839506172839
+Friday-16-02-2018,Within-Day Sensitivity,0.05,3.0,0.005988023952095809
+Friday-16-02-2018,Within-Day Sensitivity,0.01,5.0,0.005988023952095809
+Wednesday-21-02-2018,Within-Day Sensitivity,0.05,1.0,0.02857142857142857
+Wednesday-21-02-2018,Within-Day Sensitivity,0.01,5.0,0.02857142857142857
+UNSW Window Small Regime-Shift Block,Window Block,0.05,1.0,0.8769230769230769
+UNSW Window Small Regime-Shift Block,Window Block,0.01,5.0,0.8769230769230769
+UNSW Window Regime Shift Demonstration,Window Block,0.05,1.0,1.0
+UNSW Window Regime Shift Demonstration,Window Block,0.01,1.5,1.0
+UNSW Flow Contiguous Block,Flow Block,0.05,2.0,0.000625
+UNSW Flow Contiguous Block,Flow Block,0.01,3.5,0.000625

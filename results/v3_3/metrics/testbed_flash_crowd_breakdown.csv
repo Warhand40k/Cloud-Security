@@ -1,0 +1,81 @@
+Model,Method,Campaign_Type,Total_Windows,Alert_Windows,Alert_Rate,Is_Attack
+Baseline: Isolation Forest,Static Benign Quantile,volumetric_flood,40,40,1.0,1
+Baseline: Isolation Forest,Static Benign Quantile,slowloris,36,33,0.9166666666666666,1
+Baseline: Isolation Forest,Static Benign Quantile,intermittent_spike,29,29,1.0,1
+Baseline: Isolation Forest,Static Benign Quantile,endpoint_recon,31,31,1.0,1
+Baseline: Isolation Forest,Static Benign Quantile,flash_crowd,35,35,1.0,0
+Baseline: Isolation Forest,Static Split-Conformal,volumetric_flood,40,40,1.0,1
+Baseline: Isolation Forest,Static Split-Conformal,slowloris,36,33,0.9166666666666666,1
+Baseline: Isolation Forest,Static Split-Conformal,intermittent_spike,29,29,1.0,1
+Baseline: Isolation Forest,Static Split-Conformal,endpoint_recon,31,31,1.0,1
+Baseline: Isolation Forest,Static Split-Conformal,flash_crowd,35,35,1.0,0
+Baseline: Isolation Forest,Rolling Split-Conformal,volumetric_flood,40,40,1.0,1
+Baseline: Isolation Forest,Rolling Split-Conformal,slowloris,36,30,0.8333333333333334,1
+Baseline: Isolation Forest,Rolling Split-Conformal,intermittent_spike,29,28,0.9655172413793104,1
+Baseline: Isolation Forest,Rolling Split-Conformal,endpoint_recon,31,31,1.0,1
+Baseline: Isolation Forest,Rolling Split-Conformal,flash_crowd,35,4,0.11428571428571428,0
+Baseline: Isolation Forest,Adaptive Conformal (ACI),volumetric_flood,40,40,1.0,1
+Baseline: Isolation Forest,Adaptive Conformal (ACI),slowloris,36,28,0.7777777777777778,1
+Baseline: Isolation Forest,Adaptive Conformal (ACI),intermittent_spike,29,17,0.5862068965517241,1
+Baseline: Isolation Forest,Adaptive Conformal (ACI),endpoint_recon,31,31,1.0,1
+Baseline: Isolation Forest,Adaptive Conformal (ACI),flash_crowd,35,4,0.11428571428571428,0
+Baseline: ARIMA Residual,Static Benign Quantile,volumetric_flood,40,40,1.0,1
+Baseline: ARIMA Residual,Static Benign Quantile,slowloris,36,33,0.9166666666666666,1
+Baseline: ARIMA Residual,Static Benign Quantile,intermittent_spike,29,29,1.0,1
+Baseline: ARIMA Residual,Static Benign Quantile,endpoint_recon,31,31,1.0,1
+Baseline: ARIMA Residual,Static Benign Quantile,flash_crowd,35,35,1.0,0
+Baseline: ARIMA Residual,Static Split-Conformal,volumetric_flood,40,40,1.0,1
+Baseline: ARIMA Residual,Static Split-Conformal,slowloris,36,33,0.9166666666666666,1
+Baseline: ARIMA Residual,Static Split-Conformal,intermittent_spike,29,29,1.0,1
+Baseline: ARIMA Residual,Static Split-Conformal,endpoint_recon,31,31,1.0,1
+Baseline: ARIMA Residual,Static Split-Conformal,flash_crowd,35,35,1.0,0
+Baseline: ARIMA Residual,Rolling Split-Conformal,volumetric_flood,40,40,1.0,1
+Baseline: ARIMA Residual,Rolling Split-Conformal,slowloris,36,30,0.8333333333333334,1
+Baseline: ARIMA Residual,Rolling Split-Conformal,intermittent_spike,29,29,1.0,1
+Baseline: ARIMA Residual,Rolling Split-Conformal,endpoint_recon,31,31,1.0,1
+Baseline: ARIMA Residual,Rolling Split-Conformal,flash_crowd,35,7,0.2,0
+Baseline: ARIMA Residual,Adaptive Conformal (ACI),volumetric_flood,40,40,1.0,1
+Baseline: ARIMA Residual,Adaptive Conformal (ACI),slowloris,36,26,0.7222222222222222,1
+Baseline: ARIMA Residual,Adaptive Conformal (ACI),intermittent_spike,29,29,1.0,1
+Baseline: ARIMA Residual,Adaptive Conformal (ACI),endpoint_recon,31,31,1.0,1
+Baseline: ARIMA Residual,Adaptive Conformal (ACI),flash_crowd,35,5,0.14285714285714285,0
+Config A (mSTAMP+Kneedle),Static Benign Quantile,volumetric_flood,40,0,0.0,1
+Config A (mSTAMP+Kneedle),Static Benign Quantile,slowloris,36,0,0.0,1
+Config A (mSTAMP+Kneedle),Static Benign Quantile,intermittent_spike,29,0,0.0,1
+Config A (mSTAMP+Kneedle),Static Benign Quantile,endpoint_recon,31,0,0.0,1
+Config A (mSTAMP+Kneedle),Static Benign Quantile,flash_crowd,35,0,0.0,0
+Config A (mSTAMP+Kneedle),Static Split-Conformal,volumetric_flood,40,0,0.0,1
+Config A (mSTAMP+Kneedle),Static Split-Conformal,slowloris,36,0,0.0,1
+Config A (mSTAMP+Kneedle),Static Split-Conformal,intermittent_spike,29,0,0.0,1
+Config A (mSTAMP+Kneedle),Static Split-Conformal,endpoint_recon,31,0,0.0,1
+Config A (mSTAMP+Kneedle),Static Split-Conformal,flash_crowd,35,0,0.0,0
+Config A (mSTAMP+Kneedle),Rolling Split-Conformal,volumetric_flood,40,0,0.0,1
+Config A (mSTAMP+Kneedle),Rolling Split-Conformal,slowloris,36,0,0.0,1
+Config A (mSTAMP+Kneedle),Rolling Split-Conformal,intermittent_spike,29,0,0.0,1
+Config A (mSTAMP+Kneedle),Rolling Split-Conformal,endpoint_recon,31,0,0.0,1
+Config A (mSTAMP+Kneedle),Rolling Split-Conformal,flash_crowd,35,0,0.0,0
+Config A (mSTAMP+Kneedle),Adaptive Conformal (ACI),volumetric_flood,40,0,0.0,1
+Config A (mSTAMP+Kneedle),Adaptive Conformal (ACI),slowloris,36,0,0.0,1
+Config A (mSTAMP+Kneedle),Adaptive Conformal (ACI),intermittent_spike,29,0,0.0,1
+Config A (mSTAMP+Kneedle),Adaptive Conformal (ACI),endpoint_recon,31,0,0.0,1
+Config A (mSTAMP+Kneedle),Adaptive Conformal (ACI),flash_crowd,35,0,0.0,0
+Config A-prime (Causal AB),Static Benign Quantile,volumetric_flood,40,0,0.0,1
+Config A-prime (Causal AB),Static Benign Quantile,slowloris,36,0,0.0,1
+Config A-prime (Causal AB),Static Benign Quantile,intermittent_spike,29,0,0.0,1
+Config A-prime (Causal AB),Static Benign Quantile,endpoint_recon,31,0,0.0,1
+Config A-prime (Causal AB),Static Benign Quantile,flash_crowd,35,0,0.0,0
+Config A-prime (Causal AB),Static Split-Conformal,volumetric_flood,40,0,0.0,1
+Config A-prime (Causal AB),Static Split-Conformal,slowloris,36,0,0.0,1
+Config A-prime (Causal AB),Static Split-Conformal,intermittent_spike,29,0,0.0,1
+Config A-prime (Causal AB),Static Split-Conformal,endpoint_recon,31,0,0.0,1
+Config A-prime (Causal AB),Static Split-Conformal,flash_crowd,35,0,0.0,0
+Config A-prime (Causal AB),Rolling Split-Conformal,volumetric_flood,40,0,0.0,1
+Config A-prime (Causal AB),Rolling Split-Conformal,slowloris,36,0,0.0,1
+Config A-prime (Causal AB),Rolling Split-Conformal,intermittent_spike,29,0,0.0,1
+Config A-prime (Causal AB),Rolling Split-Conformal,endpoint_recon,31,0,0.0,1
+Config A-prime (Causal AB),Rolling Split-Conformal,flash_crowd,35,0,0.0,0
+Config A-prime (Causal AB),Adaptive Conformal (ACI),volumetric_flood,40,0,0.0,1
+Config A-prime (Causal AB),Adaptive Conformal (ACI),slowloris,36,0,0.0,1
+Config A-prime (Causal AB),Adaptive Conformal (ACI),intermittent_spike,29,0,0.0,1
+Config A-prime (Causal AB),Adaptive Conformal (ACI),endpoint_recon,31,0,0.0,1
+Config A-prime (Causal AB),Adaptive Conformal (ACI),flash_crowd,35,0,0.0,0
