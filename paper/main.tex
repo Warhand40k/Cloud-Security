@@ -172,7 +172,8 @@ We evaluated Static Quantile, Static Conformal, Rolling Conformal ($W=60$), and 
 \begin{table*}[t]
 \centering
 \caption{Conformal Threshold Benchmark Summary Across 32 Evaluated Configurations}\label{tab:conformal_summary}
-\small
+\setlength{\tabcolsep}{5pt}
+\resizebox{0.96\textwidth}{!}{%
 \begin{tabular}{lcccccc}
 \toprule
 \textbf{Calibration Method} & \textbf{Target $\alpha$} & \textbf{Mean Test FPR} & \textbf{Mean FPR Excess} & \textbf{Target Met (\%)} & \textbf{Mean $F_1$} & \textbf{Mean Precision} \\
@@ -187,7 +188,8 @@ Static Split-Conformal & 0.01 & 0.0182 & +0.0082 & 71.9\% & 0.2388 & 0.5354 \\
 Rolling Conformal ($W=60$) & 0.01 & \textbf{0.0106} & \textbf{+0.0006} & \textbf{62.5\%} & 0.1478 & 0.3404 \\
 Adaptive Conformal (ACI, $\gamma=0.01$) & 0.01 & \textbf{0.0106} & \textbf{+0.0006} & \textbf{62.5\%} & 0.1478 & 0.3404 \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table*}
 
 As reported in Table~\ref{tab:conformal_summary} and visualized in Figure~\ref{fig:conformal_fpr_control}, static methods systematically violated target budgets: at $\alpha = 0.05$, static quantile produced a mean test FPR of 12.37\% (+7.37\% excess), meeting the target in only 43.8\% of cases. Rolling Conformal and ACI restored rigorous control, achieving mean test FPRs of 3.06\% and 2.86\% (with 68.8\% and 71.9\% budget satisfaction). At $\alpha = 0.01$, ACI restricted mean FPR to exactly 1.06\%.
@@ -216,7 +218,8 @@ Telemetry was aggregated into 60-second regular windows across five core SRE met
 \begin{table*}[t]
 \centering
 \caption{Frozen Pipeline Performance on Live Testbed Telemetry ($\alpha=0.05$, 600 Windows, 10 Hours)}\label{tab:testbed_results}
-\small
+\setlength{\tabcolsep}{5pt}
+\resizebox{0.96\textwidth}{!}{%
 \begin{tabular}{lcccccc}
 \toprule
 \textbf{Model Family} & \textbf{Threshold Calibration} & \textbf{Test FPR} & \textbf{Precision} & \textbf{Recall} & \textbf{Test $F_1$} & \textbf{Flash Crowd FPR} \\
@@ -232,7 +235,8 @@ ARIMA Residual & Adaptive ACI ($\gamma=0.01$) & \textbf{0.0549} & \textbf{0.9333
 Config A (mSTAMP $m=5$) & Static Benign Quantile & 0.0000 & 0.0000 & 0.0000 & 0.0000 & 0.0\% (0/35) \\
 Config A-prime ($m=5$) & Static Benign Quantile & 0.0000 & 0.0000 & 0.0000 & 0.0000 & 0.0\% (0/35) \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table*}
 
 \begin{figure*}[t]
