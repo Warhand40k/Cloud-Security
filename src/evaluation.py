@@ -129,7 +129,10 @@ def compute_sre_operational_metrics(
 
     # Calculate total duration in seconds
     if timestamps is not None and len(timestamps) > 1:
-        total_duration_sec = float(timestamps[-1] - timestamps[0])
+        if is_flow_data:
+            total_duration_sec = float(timestamps[-1] - timestamps[0])
+        else:
+            total_duration_sec = float((timestamps[-1] - timestamps[0]) + default_step_sec)
         # Fallback if timestamps are identical or zero
         if total_duration_sec <= 0:
             total_duration_sec = total_steps * default_step_sec
@@ -267,16 +270,8 @@ def compute_bootstrap_confidence_intervals(
             except Exception:
                 pass
 
-    # 2. Episode/Campaign Block Bootstrap for MTTD
-    diffs = np.diff(y_true.astype(int))
-    starts = np.where(diffs == 1)[0] + 1
-    if y_true[0] == 1:
-        starts = np.insert(starts, 0, 0)
-    ends = np.where(diffs == -1)[0]
-    if y_true[-1] == 1:
-        ends = np.append(ends, n_samples - 1)
-
-    episodes = list(zip(starts, ends))
+    # 2. Episode/Campaign Block Bootstrap for MTTD (Unified campaign accounting, g=0)
+    episodes = find_campaign_intervals(y_true, gap_tolerance=0)
     total_episodes = len(episodes)
     mttd_boots = []
 

@@ -1,0 +1,46 @@
+{
+  "dataset": "UNSW-NB15",
+  "random_seed": 42,
+  "blocks": [
+    {
+      "name": "UNSW Window Small Regime-Shift Block",
+      "mode": "window",
+      "window_sec": 10,
+      "subseq_len_m": 10,
+      "file": "data/processed/unsw_nb15_10s_any_attack.parquet",
+      "train_slice": [2000, 4000],
+      "val_slice": [4000, 4470],
+      "test_slice": [4470, 4535],
+      "is_flow_data": false,
+      "description": "Small Regime-Shift Block: validation slice straddles 26-day Batch 1/Batch 2 boundary (at index 4443/4444); test slice in Batch 2 with 69.2% prevalence, 65 test windows, 1 campaign. Explicitly labeled; no conclusions drawn from it."
+    },
+    {
+      "name": "UNSW Window Regime Shift Demonstration",
+      "mode": "window",
+      "window_sec": 10,
+      "subseq_len_m": 10,
+      "file": "data/processed/unsw_nb15_10s_any_attack.parquet",
+      "train_slice": [1200, 3200],
+      "val_slice": [3200, 4600],
+      "test_slice": [4600, 5800],
+      "is_flow_data": false,
+      "description": "Regime Shift Demonstration: validation slice straddles 26-day Batch 1/Batch 2 boundary; test slice in Batch 2 saturation (99.5% prevalence, 1200 test windows, 4 campaigns)."
+    },
+    {
+      "name": "UNSW Flow Contiguous Block",
+      "mode": "flow",
+      "n_samples": 8000,
+      "subseq_len_m": 5,
+      "train_frac": 0.60,
+      "val_frac": 0.20,
+      "test_frac": 0.20,
+      "is_flow_data": true,
+      "description": "Contiguous flow block within Batch 1 (file 1, first 8000 flows); strictly chronological train/val/test partitions (4800/1600/1600). Note: train contains 184 attack flows (3.83%), filtered to normal flows for benign reference."
+    }
+  ],
+  "mad_c_candidates": [1.5, 2.0, 2.5, 3.0, 3.5],
+  "evt_q": 0.80,
+  "evt_risk_candidates": [0.10, 0.05, 0.02, 0.01, 0.005, 0.001],
+  "persistence_k_candidates": [1, 2, 3, 4, 5]
+}
+

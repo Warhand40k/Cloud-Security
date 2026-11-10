@@ -1,0 +1,39 @@
+{
+  "dataset": "CSE-CIC-IDS2018",
+  "protocol": "multi_day_rolling_origin",
+  "window_sec": 60,
+  "subseq_len_m": 10,
+  "scaler_type": "standard",
+  "random_seed": 42,
+  "blocks": [
+    {
+      "day": "Thursday-15-02-2018",
+      "attacks": ["GoldenEye", "Slowloris"],
+      "file": "data/processed/csecicids2018_thursday_60s_regular.parquet",
+      "train_slice": [0, 250],
+      "val_slice": [250, 558],
+      "test_slice": [558, 720]
+    },
+    {
+      "day": "Friday-16-02-2018",
+      "attacks": ["Hulk", "SlowHTTPTest"],
+      "file": "data/processed/csecicids2018_friday_60s_regular.parquet",
+      "train_slice": [0, 45],
+      "val_slice": [45, 552],
+      "test_slice": [552, 719]
+    },
+    {
+      "day": "Wednesday-21-02-2018",
+      "attacks": ["HOIC", "LOIC-UDP"],
+      "file": "data/processed/csecicids2018_wednesday_60s_regular.parquet",
+      "train_slice": [0, 16],
+      "val_slice": [16, 459],
+      "test_slice": [459, 529]
+    }
+  ],
+  "mad_c_candidates": [1.5, 2.0, 2.5, 3.0, 3.5],
+  "evt_q": 0.80,
+  "evt_risk_candidates": [0.10, 0.05, 0.02, 0.01, 0.005, 0.001],
+  "persistence_k_candidates": [1, 2, 3, 4, 5]
+}
+

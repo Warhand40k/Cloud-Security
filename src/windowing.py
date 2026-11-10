@@ -83,17 +83,21 @@ def aggregate_time_windows(
         else:
             raise ValueError(f"Unknown label_rule: {label_rule}")
 
+    windowed_df["window_dt"] = pd.to_datetime(windowed_df["window_time"], unit="s").astype(str)
     windowed_df = windowed_df.sort_values(by="window_time").reset_index(drop=True)
     return windowed_df
 
 def aggregate_csecicids2018_windows(
     csv_path: str,
     window_sec: int = 60,
-    label_rule: LabelRule = "any_attack"
+    label_rule: LabelRule = "any_attack",
+    fill_empty_windows: bool = True
 ) -> pd.DataFrame:
     """
     Aggregate CSE-CIC-IDS2018 flow records into fixed time windows.
     Computes cloud network SRE telemetry: rates, volumes, flag counts, and port diversity.
+    If fill_empty_windows is True, generates a complete regular time grid filling quiescent
+    windows with zero-count telemetry and benign label (0).
     """
     print(f"Reading CSE-CIC-IDS2018 from {csv_path}...")
     df = pd.read_csv(csv_path, low_memory=False)
@@ -159,5 +163,28 @@ def aggregate_csecicids2018_windows(
     else:
         raise ValueError(f"Unknown label_rule: {label_rule}")
 
+    if fill_empty_windows and not win_features.empty:
+        t_min = int(win_features["window_time"].min())
+        t_max = int(win_features["window_time"].max())
+        full_grid = pd.DataFrame({"window_time": np.arange(t_min, t_max + window_sec, window_sec, dtype=np.int64)})
+        win_features = pd.merge(full_grid, win_features, on="window_time", how="left")
+        
+        int_cols = [
+            "flow_count", "attack_count", "tot_fwd_pkts", "tot_bwd_pkts", "tot_fwd_bytes", "tot_bwd_bytes",
+            "syn_flags_total", "rst_flags_total", "ack_flags_total", "unique_dst_ports",
+            "Label_any", "Label_majority", "Label_ratio10", "Label"
+        ]
+        for c in int_cols:
+            if c in win_features.columns:
+                win_features[c] = win_features[c].fillna(0).astype(int)
+                
+        float_cols = [
+            "flow_duration_mean", "flow_byts_s_mean", "flow_pkts_s_mean", "pkt_len_mean", "attack_ratio"
+        ]
+        for c in float_cols:
+            if c in win_features.columns:
+                win_features[c] = win_features[c].fillna(0.0).astype(float)
+
+    win_features["window_dt"] = pd.to_datetime(win_features["window_time"], unit="s").astype(str)
     win_features = win_features.sort_values(by="window_time").reset_index(drop=True)
     return win_features

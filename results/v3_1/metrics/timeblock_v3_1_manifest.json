@@ -1,0 +1,23 @@
+{
+  "git_commit": "54ade9e3e6557079a6bdb7b77a472d2930124f1a",
+  "timestamp_utc": "2026-11-10T12:02:06Z",
+  "random_seed": 42,
+  "runtime_total_seconds": 122.5973699092865,
+  "configs": {
+    "cse_cic_ids2018_multiday": "configs/v3_1/cse_cic_ids2018_multiday.json",
+    "cse_cic_ids2018_hash": "bd06b1008ecd1556e2cb049a8cd57ce20b84d47b512fff1cf5b687ee03bc5ebc",
+    "unsw_nb15": "configs/v3_1/unsw_nb15.json",
+    "unsw_nb15_hash": "b9ee62dd1b3367b422d5542d84c033be06b8e18640878cf273b36c79a568a130"
+  },
+  "environment": {
+    "platform": "Linux-7.2.14-arch1-1-x86_64-with-glibc2.44",
+    "python_version": "3.12.13",
+    "cpu_count": 16
+  },
+  "package_versions": {
+    "numpy": "2.5.4",
+    "pandas": "3.1.1",
+    "scipy": "1.18.1",
+    "sklearn": "1.9.1"
+  }
+}
