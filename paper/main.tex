@@ -18,17 +18,17 @@
 
 \graphicspath{{assets/}{figures/}}
 
-% Float layout parameters for high readability and smooth float placement
-\renewcommand{\topfraction}{0.95}
-\renewcommand{\bottomfraction}{0.95}
-\renewcommand{\textfraction}{0.05}
-\renewcommand{\floatpagefraction}{0.85}
-\setcounter{topnumber}{4}
-\setcounter{bottomnumber}{4}
-\setcounter{totalnumber}{8}
-\setcounter{dbltopnumber}{4}
-\renewcommand{\dbltopfraction}{0.95}
-\renewcommand{\dblfloatpagefraction}{0.85}
+% Float layout parameters for clean float distribution and avoiding deferral
+\renewcommand{\topfraction}{0.90}
+\renewcommand{\bottomfraction}{0.80}
+\renewcommand{\textfraction}{0.08}
+\renewcommand{\floatpagefraction}{0.75}
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{3}
+\setcounter{totalnumber}{6}
+\setcounter{dbltopnumber}{2}
+\renewcommand{\dbltopfraction}{0.90}
+\renewcommand{\dblfloatpagefraction}{0.75}
 
 \title{\textbf{\LARGE Reproduction, Causal Extension, and Methodological Audit of Multidimensional Matrix Profile for Network Anomaly Detection in Cloud Environments}}
 
@@ -125,7 +125,7 @@ Within-day training splits on Friday ($N=45$) and Wednesday ($N=16$) severely st
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=0.92\textwidth]{assets/score_histograms_saturation_diagnosis.png}
+\includegraphics[width=0.88\textwidth]{assets/score_histograms_saturation_diagnosis.png}
 \caption{Validation and test anomaly score distributions for Config A-prime on UNSW Flow telemetry and saturation cure. (a) 99.73\% of benign validation scores are exactly 0.0, causing validation-$F_1$ optimization to collapse the threshold to $\tau^* = 0.0$ and driving test FPR to 100\%. (b) An $\epsilon$-MAD floor and label-free quantile rule restore FPR from 100\% to 0.57\%, definitively refuting the 26-day calendar gap hypothesis.}\label{fig:saturation_diagnosis}
 \end{figure*}
 
@@ -139,33 +139,6 @@ Al-Mazrawe \& Al-Musawi \cite{almazrawe2025enhancing} claimed that requiring $k 
 
 \subsection{Multi-Block Flow Evaluation}
 Across 10 contiguous blocks of 8,000 flows (80,000 flows total) on UNSW-NB15, all matrix profile configurations scored mean $F_1 \le 0.1246$, failing to outperform the naive All-Attack baseline ($F_1 = 0.1281$), with near-chance ROC-AUC ($0.52 - 0.56$). Euclidean subsequence distance fails to capture transactional flow semantics.
-
-\begin{table*}[t]
-\centering
-\caption{Conformal Threshold Benchmark Summary Across 32 Evaluated Configurations}\label{tab:conformal_summary}
-\small
-\begin{tabular}{lcccccc}
-\toprule
-\textbf{Calibration Method} & \textbf{Target $\alpha$} & \textbf{Mean Test FPR} & \textbf{Mean FPR Excess} & \textbf{Target Met (\%)} & \textbf{Mean $F_1$} & \textbf{Mean Precision} \\
-\midrule
-Static Benign Quantile & 0.05 & 0.1237 & +0.0737 & 43.8\% & \textbf{0.4076} & 0.6136 \\
-Static Split-Conformal & 0.05 & 0.1199 & +0.0699 & 43.8\% & 0.4053 & 0.6155 \\
-Rolling Conformal ($W=60$) & 0.05 & \textbf{0.0306} & \textbf{-0.0194} & \textbf{68.8\%} & 0.2349 & 0.4171 \\
-Adaptive Conformal (ACI, $\gamma=0.01$) & 0.05 & \textbf{0.0286} & \textbf{-0.0214} & \textbf{71.9\%} & 0.2345 & 0.4138 \\
-\midrule
-Static Benign Quantile & 0.01 & 0.0200 & +0.0100 & 65.6\% & 0.2507 & 0.5348 \\
-Static Split-Conformal & 0.01 & 0.0182 & +0.0082 & 71.9\% & 0.2388 & 0.5354 \\
-Rolling Conformal ($W=60$) & 0.01 & \textbf{0.0106} & \textbf{+0.0006} & \textbf{62.5\%} & 0.1478 & 0.3404 \\
-Adaptive Conformal (ACI, $\gamma=0.01$) & 0.01 & \textbf{0.0106} & \textbf{+0.0006} & \textbf{62.5\%} & 0.1478 & 0.3404 \\
-\bottomrule
-\end{tabular}
-\end{table*}
-
-\begin{figure*}[t]
-\centering
-\includegraphics[width=0.88\textwidth]{assets/conformal_fpr_control_alpha05.png}
-\caption{Empirical test FPR vs.\ target budget $\alpha=0.05$ across 32 benchmark configurations. Static thresholds severely exceed target budgets (+7.37\% excess), while Rolling Conformal and Adaptive ACI strictly constrain FPR below or at the target budget with exact percentages annotated.}\label{fig:conformal_fpr_control}
-\end{figure*}
 
 \section{Stage 2 Contribution: Conformal False Alarm Control}
 
@@ -189,16 +162,56 @@ where $\text{err}_t = \mathbb{I}(s_t \ge \tau_t)$ denotes an alert on an unflagg
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=0.92\textwidth]{assets/conformal_rolling_thresholds_friday.png}
-\caption{Timeline of anomaly scores and adaptive decision thresholds ($\tau_t$) during the CSE-CIC-IDS2018 Friday DoS-Hulk attack window. Rolling conformal calibration dynamically adapts to baseline changes, isolating true attacks with zero false alarms.}\label{fig:conformal_rolling_timeline}
+\includegraphics[width=0.82\textwidth]{assets/conformal_fpr_control_alpha05.png}
+\caption{Empirical test FPR vs.\ target budget $\alpha=0.05$ across 32 benchmark configurations. Static thresholds severely exceed target budgets (+7.37\% excess), while Rolling Conformal and Adaptive ACI strictly constrain FPR below or at the target budget with exact percentages annotated.}\label{fig:conformal_fpr_control}
 \end{figure*}
 
 \subsection{Benchmark Evaluation Across 32 Configurations}
 We evaluated Static Quantile, Static Conformal, Rolling Conformal ($W=60$), and Adaptive ACI across 32 configurations spanning UNSW-NB15, CSE-CIC-IDS2018, and four model families (Isolation Forest, ARIMA Residual, Config A, Config A-prime).
 
+\begin{table*}[t]
+\centering
+\caption{Conformal Threshold Benchmark Summary Across 32 Evaluated Configurations}\label{tab:conformal_summary}
+\small
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Calibration Method} & \textbf{Target $\alpha$} & \textbf{Mean Test FPR} & \textbf{Mean FPR Excess} & \textbf{Target Met (\%)} & \textbf{Mean $F_1$} & \textbf{Mean Precision} \\
+\midrule
+Static Benign Quantile & 0.05 & 0.1237 & +0.0737 & 43.8\% & \textbf{0.4076} & 0.6136 \\
+Static Split-Conformal & 0.05 & 0.1199 & +0.0699 & 43.8\% & 0.4053 & 0.6155 \\
+Rolling Conformal ($W=60$) & 0.05 & \textbf{0.0306} & \textbf{-0.0194} & \textbf{68.8\%} & 0.2349 & 0.4171 \\
+Adaptive Conformal (ACI, $\gamma=0.01$) & 0.05 & \textbf{0.0286} & \textbf{-0.0214} & \textbf{71.9\%} & 0.2345 & 0.4138 \\
+\midrule
+Static Benign Quantile & 0.01 & 0.0200 & +0.0100 & 65.6\% & 0.2507 & 0.5348 \\
+Static Split-Conformal & 0.01 & 0.0182 & +0.0082 & 71.9\% & 0.2388 & 0.5354 \\
+Rolling Conformal ($W=60$) & 0.01 & \textbf{0.0106} & \textbf{+0.0006} & \textbf{62.5\%} & 0.1478 & 0.3404 \\
+Adaptive Conformal (ACI, $\gamma=0.01$) & 0.01 & \textbf{0.0106} & \textbf{+0.0006} & \textbf{62.5\%} & 0.1478 & 0.3404 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
 As reported in Table~\ref{tab:conformal_summary} and visualized in Figure~\ref{fig:conformal_fpr_control}, static methods systematically violated target budgets: at $\alpha = 0.05$, static quantile produced a mean test FPR of 12.37\% (+7.37\% excess), meeting the target in only 43.8\% of cases. Rolling Conformal and ACI restored rigorous control, achieving mean test FPRs of 3.06\% and 2.86\% (with 68.8\% and 71.9\% budget satisfaction). At $\alpha = 0.01$, ACI restricted mean FPR to exactly 1.06\%.
 
 Figure~\ref{fig:conformal_rolling_timeline} displays the dynamic threshold behavior during the Friday DoS-Hulk attack. For Isolation Forest, rolling calibration slashed FPR from 12.50\% to 1.67\% while maintaining 100\% recall, boosting $F_1$ from 0.8624 to 0.9792.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.85\textwidth]{assets/conformal_rolling_thresholds_friday.png}
+\caption{Timeline of anomaly scores and adaptive decision thresholds ($\tau_t$) during the CSE-CIC-IDS2018 Friday DoS-Hulk attack window. Rolling conformal calibration dynamically adapts to baseline changes, isolating true attacks with zero false alarms.}\label{fig:conformal_rolling_timeline}
+\end{figure*}
+
+\section{Stage 3 Bounded Testbed Validation}
+
+\subsection{Live Microservice Architecture}
+To validate the frozen pipeline in an operational environment, we built a container-ready testbed:
+\begin{itemize}
+    \item \textbf{Target Microservice:} A Flask REST service instrumented with Prometheus client metrics, exposing catalog query, search, and checkout endpoints.
+    \item \textbf{Diurnal Benign Load:} A Locust generator executing transactions following a sinusoidal diurnal curve ($RPS \in [10, 40]$) with Poisson arrivals.
+    \item \textbf{Confined Attacker:} An isolated attacking container confined strictly to localhost (`127.0.0.1:8088`), launching 25 labeled attack campaigns across 600 contiguous 60-second windows (10 hours total). Campaigns included HTTP volumetric floods, endpoint fuzzing, and slow-rate stealth attacks.
+    \item \textbf{Benign Flash Crowds:} 5 distinct campaigns where legitimate user volume surges 4x--5x with valid 200 OK responses and zero server errors.
+\end{itemize}
+
+Telemetry was aggregated into 60-second regular windows across five core SRE metrics: Request Volume, Error Rate, P95 Latency, Byte Ingress, and Discard Rate.
 
 \begin{table*}[t]
 \centering
@@ -224,31 +237,18 @@ Config A-prime ($m=5$) & Static Benign Quantile & 0.0000 & 0.0000 & 0.0000 & 0.0
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=0.96\textwidth]{assets/testbed_timeline_scores.png}
+\includegraphics[width=0.88\textwidth]{assets/testbed_timeline_scores.png}
 \caption{10-hour telemetry timeline on the live microservice testbed (600 windows). Top: transaction volume and latency under diurnal Locust load with 25 labeled attacks and 5 flash crowds. Middle: Prometheus error rates and byte ingress. Bottom: detector anomaly scores and dynamic conformal thresholds tracking diurnal variation.}\label{fig:testbed_timeline}
-\end{figure*}
-
-\section{Stage 3 Bounded Testbed Validation}
-
-\subsection{Live Microservice Architecture}
-To validate the frozen pipeline in an operational environment, we built a container-ready testbed:
-\begin{itemize}
-    \item \textbf{Target Microservice:} A Flask REST service instrumented with Prometheus client metrics, exposing catalog query, search, and checkout endpoints.
-    \item \textbf{Diurnal Benign Load:} A Locust generator executing transactions following a sinusoidal diurnal curve ($RPS \in [10, 40]$) with Poisson arrivals.
-    \item \textbf{Confined Attacker:} An isolated attacking container confined strictly to localhost (`127.0.0.1:8088`), launching 25 labeled attack campaigns across 600 contiguous 60-second windows (10 hours total). Campaigns included HTTP volumetric floods, endpoint fuzzing, and slow-rate stealth attacks.
-    \item \textbf{Benign Flash Crowds:} 5 distinct campaigns where legitimate user volume surges 4x--5x with valid 200 OK responses and zero server errors.
-\end{itemize}
-
-Telemetry was aggregated into 60-second regular windows across five core SRE metrics: Request Volume, Error Rate, P95 Latency, Byte Ingress, and Discard Rate.
-
-\begin{figure*}[t]
-\centering
-\includegraphics[width=0.88\textwidth]{assets/testbed_campaign_type_recall.png}
-\caption{Detection recall across attack campaign types and false positive rates during benign flash crowds. Static thresholds trigger 100\% false alarms on flash crowds, whereas rolling conformal calibration eliminates 88.6\% of flash crowd alarms while preserving high attack recall with exact percentages annotated.}\label{fig:testbed_campaign_recall}
 \end{figure*}
 
 \subsection{Flash Crowd Vulnerability \& Resolution}
 Table~\ref{tab:testbed_results} and Figure~\ref{fig:testbed_timeline} present the performance of the frozen pipeline on the live testbed. A critical vulnerability was uncovered: \textbf{static thresholds suffered a 100.0\% false alarm rate during benign flash crowds (35 / 35 flash crowd windows incorrectly flagged as cyberattacks)}. Because static thresholds rely on fixed historical bounds, volumetric surges caused by legitimate user interest trigger severe alert storms ($> 35$ alerts/hour).
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.82\textwidth]{assets/testbed_campaign_type_recall.png}
+\caption{Detection recall across attack campaign types and false positive rates during benign flash crowds. Static thresholds trigger 100\% false alarms on flash crowds, whereas rolling conformal calibration eliminates 88.6\% of flash crowd alarms while preserving high attack recall with exact percentages annotated.}\label{fig:testbed_campaign_recall}
+\end{figure*}
 
 In contrast, Rolling Conformal calibration adapted to legitimate baseline increases, slashing flash crowd false alarms to \textbf{11.43\% (4 / 35)}---an 88.6\% reduction. For Isolation Forest, this lifted Precision from 0.7557 to 0.9416 and test $F_1$ from 0.8526 to \textbf{0.9451}, while maintaining \textbf{100\% campaign recall} across all volumetric attacks (Figure~\ref{fig:testbed_campaign_recall}). ARIMA Residual achieved similar gains, reaching $F_1 = 0.9353$ with 100\% campaign recall.
 
@@ -262,8 +262,10 @@ In cloud SRE deployments, alert fatigue represents the primary failure mode of a
     \item \textbf{Enforce Minimum Reference Capacity ($N \ge 100$):} Operators must provide adequate training windows to prevent model starvation and catastrophic ranking reversals.
 \end{enumerate}
 
+\noindent\begin{minipage}{\columnwidth}
 \section{Conclusion}
 This study presented a rigorous reproduction, causal extension, and methodological audit of the mSTAMP + Kneedle anomaly detection pipeline. We demonstrated that published near-perfect detection numbers depend on unstated operational assumptions and compressed time axes. On continuous multi-block flow benchmarks and live microservice telemetry, matrix profiles fail to outperform simple baselines. Split-conformal and adaptive thresholding provides mathematically grounded false alarm control, resolving the flash crowd vulnerability and providing a reliable foundation for cloud telemetry monitoring.
+\end{minipage}
 
 % Flush all pending floating figures and tables before starting references
 \clearpage
