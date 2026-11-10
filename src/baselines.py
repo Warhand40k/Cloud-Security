@@ -10,6 +10,7 @@ import pandas as pd
 from typing import Dict, Any, Optional, List
 from sklearn.ensemble import IsolationForest
 from statsmodels.tsa.arima.model import ARIMA
+from src.adaptive_threshold import calibrate_benign_quantile_threshold
 
 class AllAttackBaseline:
     """Trivial baseline: predicts 1 (Attack) for all observations."""
@@ -90,25 +91,13 @@ class IsolationForestBaseline:
         """
         return -self.model.score_samples(X)
 
-    def calibrate_threshold(self, X_val: np.ndarray, y_val: np.ndarray, metric: str = "f1"):
-        """Calibrate decision threshold on validation set."""
+    def calibrate_threshold(self, X_val: np.ndarray, y_val: np.ndarray, alpha: float = 0.05):
+        """
+        Calibrate decision threshold on BENIGN validation samples to enforce FAR <= alpha.
+        No F1 optimization or attack labels are used.
+        """
         scores_val = self.score_samples(X_val)
-        
-        # Grid sweep over percentiles
-        percentiles = np.linspace(80, 99.9, 100)
-        best_thresh = float(np.median(scores_val))
-        best_score = -1.0
-
-        for p in percentiles:
-            thresh = float(np.percentile(scores_val, p))
-            pred = (scores_val >= thresh).astype(int)
-            from sklearn.metrics import f1_score
-            f1 = f1_score(y_val, pred, zero_division=0)
-            if f1 > best_score:
-                best_score = f1
-                best_thresh = thresh
-
-        self.threshold_ = best_thresh
+        self.threshold_ = calibrate_benign_quantile_threshold(scores_val, y_val, alpha=alpha)
         return self.threshold_
 
     def predict(self, X: np.ndarray) -> np.ndarray:
@@ -181,23 +170,13 @@ class ARIMAResidualBaseline:
         aggregate_scores = np.sqrt(np.sum(np.maximum(0, z_scores) ** 2, axis=1))
         return aggregate_scores
 
-    def calibrate_threshold(self, X_val: np.ndarray, y_val: np.ndarray):
-        """Calibrate threshold on validation split."""
+    def calibrate_threshold(self, X_val: np.ndarray, y_val: np.ndarray, alpha: float = 0.05):
+        """
+        Calibrate decision threshold on BENIGN validation samples to enforce FAR <= alpha.
+        No F1 optimization or attack labels are used.
+        """
         scores_val = self.score_samples(X_val)
-        percentiles = np.linspace(80, 99.9, 100)
-        best_thresh = float(np.median(scores_val))
-        best_score = -1.0
-
-        for p in percentiles:
-            thresh = float(np.percentile(scores_val, p))
-            pred = (scores_val >= thresh).astype(int)
-            from sklearn.metrics import f1_score
-            f1 = f1_score(y_val, pred, zero_division=0)
-            if f1 > best_score:
-                best_score = f1
-                best_thresh = thresh
-
-        self.threshold_ = best_thresh
+        self.threshold_ = calibrate_benign_quantile_threshold(scores_val, y_val, alpha=alpha)
         return self.threshold_
 
     def predict(self, X: np.ndarray) -> np.ndarray:

@@ -38,15 +38,37 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from src.persistence_filter import PersistenceFilter
 from src.evaluation import compute_clopper_pearson_ci, find_campaign_intervals
+from src.adaptive_threshold import calibrate_benign_quantile_threshold
 
-OUTPUT_METRICS_DIR = "results/v3/metrics"
-OUTPUT_PREDICTIONS_DIR = "results/v3/predictions"
-OUTPUT_FIGURES_DIR = "results/v3/figures"
+OUTPUT_METRICS_DIR = "results/v3_1/metrics"
+OUTPUT_PREDICTIONS_DIR = "results/v3_1/predictions"
+OUTPUT_FIGURES_DIR = "results/v3_1/figures"
 os.makedirs(OUTPUT_METRICS_DIR, exist_ok=True)
 os.makedirs(OUTPUT_PREDICTIONS_DIR, exist_ok=True)
 os.makedirs(OUTPUT_FIGURES_DIR, exist_ok=True)
 
 BLOCKS_METADATA = [
+    {
+        "block_name": "Thursday-15-02-2018 (Cross-Day Primary)",
+        "clean_name": "Thursday-15-02-2018_Cross-Day_Primary",
+        "dataset": "CSE-CIC-IDS2018",
+        "is_flow": False,
+        "step_sec": 60.0
+    },
+    {
+        "block_name": "Friday-16-02-2018 (Cross-Day Primary)",
+        "clean_name": "Friday-16-02-2018_Cross-Day_Primary",
+        "dataset": "CSE-CIC-IDS2018",
+        "is_flow": False,
+        "step_sec": 60.0
+    },
+    {
+        "block_name": "Wednesday-21-02-2018 (Cross-Day Primary)",
+        "clean_name": "Wednesday-21-02-2018_Cross-Day_Primary",
+        "dataset": "CSE-CIC-IDS2018",
+        "is_flow": False,
+        "step_sec": 60.0
+    },
     {
         "block_name": "Thursday-15-02-2018",
         "clean_name": "Thursday-15-02-2018",
@@ -144,18 +166,13 @@ def find_threshold_on_validation(
         if len(neg_scores) == 0:
             return None, "unreachable (no validation benign samples)", 0.0
 
-        if np.all(neg_scores == neg_scores[0]):
-            # Saturated/constant scores: FPR is either 0 or 1
-            th = float(neg_scores[0])
-            pred_val = (s_val >= th).astype(int)
-            tn, fp, fn, tp = confusion_matrix(y_val, pred_val, labels=[0, 1]).ravel()
-            achieved_fpr = float(fp / (fp + tn)) if (fp + tn) > 0 else 0.0
-            return th, "target unreachable on validation (score ties)", achieved_fpr
-
-        th = float(np.quantile(neg_scores, max(0.0, min(1.0, 1.0 - target_val))))
+        th = calibrate_benign_quantile_threshold(s_val, y_val, alpha=target_val)
         pred_val = (s_val >= th).astype(int)
         tn, fp, fn, tp = confusion_matrix(y_val, pred_val, labels=[0, 1]).ravel()
         achieved_fpr = float(fp / (fp + tn)) if (fp + tn) > 0 else 0.0
+        
+        if achieved_fpr > target_val + 1e-6:
+            return th, "target unreachable on validation (score ties)", achieved_fpr
         return th, "calibrated", achieved_fpr
 
     else:
@@ -292,19 +309,24 @@ def run_matched_evaluations():
                 pred_test = (s_test >= th).astype(int)
                 m = compute_metrics(y_test, pred_test, step_sec, is_flow, all_attack_f1)
 
-                # Determine match status based on test performance within +/- 0.05
+                # Determine match status based on honest one-sided criteria and zero-recall audit
                 if val_status.startswith("target unreachable"):
                     match_status = val_status
                 else:
                     if target_type == "recall":
                         test_metric = m["Recall"]
-                    else:
+                        if test_metric >= target_val - 0.05:
+                            match_status = "target met"
+                        else:
+                            match_status = "target not reached"
+                    else: # target_type == "fpr"
                         test_metric = m["FPR"]
-
-                    if abs(test_metric - target_val) <= 0.05:
-                        match_status = "matched"
-                    else:
-                        match_status = "target not reached"
+                        if m["Recall"] == 0.0 or (test_metric == 0.0 and m["Recall"] == 0.0):
+                            match_status = "unmatched (zero recall)"
+                        elif test_metric <= target_val:
+                            match_status = "target met"
+                        else:
+                            match_status = "target not reached"
 
                 rec = {
                     "Block": bname,
@@ -331,10 +353,15 @@ def run_matched_evaluations():
 
                     if target_type == "recall":
                         pf_metric = m_pf["Recall"]
+                        pf_match = "target met" if pf_metric >= target_val - 0.05 else "target not reached"
                     else:
                         pf_metric = m_pf["FPR"]
-
-                    pf_match = "matched" if abs(pf_metric - target_val) <= 0.05 else "target not reached"
+                        if m_pf["Recall"] == 0.0 or (pf_metric == 0.0 and m_pf["Recall"] == 0.0):
+                            pf_match = "unmatched (zero recall)"
+                        elif pf_metric <= target_val:
+                            pf_match = "target met"
+                        else:
+                            pf_match = "target not reached"
                     matched_records.append({
                         "Block": bname,
                         "Dataset": dname,

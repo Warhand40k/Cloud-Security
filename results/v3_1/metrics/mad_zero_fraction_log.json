@@ -1,0 +1,128 @@
+[
+  {
+    "Block":"Thursday-15-02-2018",
+    "Design":"Cross-Day Primary",
+    "Alpha":0.05,
+    "Chosen_Multiplier_C":2.0,
+    "Zero_MAD_Fraction":0.0061728395
+  },
+  {
+    "Block":"Thursday-15-02-2018",
+    "Design":"Cross-Day Primary",
+    "Alpha":0.01,
+    "Chosen_Multiplier_C":5.0,
+    "Zero_MAD_Fraction":0.0061728395
+  },
+  {
+    "Block":"Friday-16-02-2018",
+    "Design":"Cross-Day Primary",
+    "Alpha":0.05,
+    "Chosen_Multiplier_C":4.5,
+    "Zero_MAD_Fraction":0.0119760479
+  },
+  {
+    "Block":"Friday-16-02-2018",
+    "Design":"Cross-Day Primary",
+    "Alpha":0.01,
+    "Chosen_Multiplier_C":5.0,
+    "Zero_MAD_Fraction":0.0119760479
+  },
+  {
+    "Block":"Wednesday-21-02-2018",
+    "Design":"Cross-Day Primary",
+    "Alpha":0.05,
+    "Chosen_Multiplier_C":1.0,
+    "Zero_MAD_Fraction":0.0285714286
+  },
+  {
+    "Block":"Wednesday-21-02-2018",
+    "Design":"Cross-Day Primary",
+    "Alpha":0.01,
+    "Chosen_Multiplier_C":5.0,
+    "Zero_MAD_Fraction":0.0285714286
+  },
+  {
+    "Block":"Thursday-15-02-2018",
+    "Design":"Within-Day Sensitivity",
+    "Alpha":0.05,
+    "Chosen_Multiplier_C":2.0,
+    "Zero_MAD_Fraction":0.0061728395
+  },
+  {
+    "Block":"Thursday-15-02-2018",
+    "Design":"Within-Day Sensitivity",
+    "Alpha":0.01,
+    "Chosen_Multiplier_C":5.0,
+    "Zero_MAD_Fraction":0.0061728395
+  },
+  {
+    "Block":"Friday-16-02-2018",
+    "Design":"Within-Day Sensitivity",
+    "Alpha":0.05,
+    "Chosen_Multiplier_C":3.0,
+    "Zero_MAD_Fraction":0.005988024
+  },
+  {
+    "Block":"Friday-16-02-2018",
+    "Design":"Within-Day Sensitivity",
+    "Alpha":0.01,
+    "Chosen_Multiplier_C":5.0,
+    "Zero_MAD_Fraction":0.005988024
+  },
+  {
+    "Block":"Wednesday-21-02-2018",
+    "Design":"Within-Day Sensitivity",
+    "Alpha":0.05,
+    "Chosen_Multiplier_C":1.0,
+    "Zero_MAD_Fraction":0.0285714286
+  },
+  {
+    "Block":"Wednesday-21-02-2018",
+    "Design":"Within-Day Sensitivity",
+    "Alpha":0.01,
+    "Chosen_Multiplier_C":5.0,
+    "Zero_MAD_Fraction":0.0285714286
+  },
+  {
+    "Block":"UNSW Window Small Regime-Shift Block",
+    "Design":"Window Block",
+    "Alpha":0.05,
+    "Chosen_Multiplier_C":1.0,
+    "Zero_MAD_Fraction":0.8769230769
+  },
+  {
+    "Block":"UNSW Window Small Regime-Shift Block",
+    "Design":"Window Block",
+    "Alpha":0.01,
+    "Chosen_Multiplier_C":5.0,
+    "Zero_MAD_Fraction":0.8769230769
+  },
+  {
+    "Block":"UNSW Window Regime Shift Demonstration",
+    "Design":"Window Block",
+    "Alpha":0.05,
+    "Chosen_Multiplier_C":1.0,
+    "Zero_MAD_Fraction":1.0
+  },
+  {
+    "Block":"UNSW Window Regime Shift Demonstration",
+    "Design":"Window Block",
+    "Alpha":0.01,
+    "Chosen_Multiplier_C":1.5,
+    "Zero_MAD_Fraction":1.0
+  },
+  {
+    "Block":"UNSW Flow Contiguous Block",
+    "Design":"Flow Block",
+    "Alpha":0.05,
+    "Chosen_Multiplier_C":2.0,
+    "Zero_MAD_Fraction":0.000625
+  },
+  {
+    "Block":"UNSW Flow Contiguous Block",
+    "Design":"Flow Block",
+    "Alpha":0.01,
+    "Chosen_Multiplier_C":3.5,
+    "Zero_MAD_Fraction":0.000625
+  }
+]

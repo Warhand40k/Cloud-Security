@@ -15,12 +15,14 @@ class MADThreshold:
     Config B1: Median Absolute Deviation (MAD) adaptive threshold.
     Threshold = median + c * (1.4826 * MAD)
     """
-    def __init__(self, c: float = 3.0, rolling_window: Optional[int] = None):
+    def __init__(self, c: float = 3.0, rolling_window: Optional[int] = None, eps: float = 1e-6):
         self.c = c
         self.rolling_window = rolling_window
+        self.eps = eps
         self.median_ = 0.0
         self.mad_ = 0.0
         self.threshold_ = 0.0
+        self.zero_mad_fraction_ = 0.0
 
     def fit(self, scores: np.ndarray):
         """Fit static baseline threshold on normal / validation scores."""
@@ -32,9 +34,9 @@ class MADThreshold:
         deviations = np.abs(clean_scores - self.median_)
         self.mad_ = float(np.median(deviations))
         # 1.4826 makes MAD an asymptotically unbiased estimator of standard deviation
-        sigma = 1.4826 * self.mad_
-        if sigma < 1e-8:
-            sigma = float(np.std(clean_scores)) + 1e-6
+        sigma = 1.4826 * max(self.mad_, self.eps)
+        if sigma < self.eps:
+            sigma = float(np.std(clean_scores)) + self.eps
         self.threshold_ = self.median_ + self.c * sigma
         return self
 
@@ -44,16 +46,53 @@ class MADThreshold:
         If rolling_window is specified, computes causal rolling MAD.
         """
         if self.rolling_window is None:
+            self.zero_mad_fraction_ = 1.0 if self.mad_ == 0.0 else 0.0
             return (scores >= self.threshold_).astype(int)
         else:
             s_series = pd.Series(scores)
             roll_med = s_series.rolling(self.rolling_window, min_periods=1).median()
             roll_dev = (s_series - roll_med).abs()
             roll_mad = roll_dev.rolling(self.rolling_window, min_periods=1).median()
-            roll_sigma = 1.4826 * roll_mad
-            roll_thresh = roll_med + self.c * roll_sigma
-            roll_thresh = roll_thresh.fillna(self.threshold_)
-            return (scores >= roll_thresh.values).astype(int)
+            
+            # Log fraction of windows where MAD == 0
+            self.zero_mad_fraction_ = float(np.mean(roll_mad.values == 0.0))
+            
+            # Epsilon floor to prevent division/multiplication blow-ups on flat signals
+            roll_mad_floored = np.maximum(roll_mad.values, self.eps)
+            roll_sigma = 1.4826 * roll_mad_floored
+            roll_thresh = roll_med.values + self.c * roll_sigma
+            roll_thresh = np.where(np.isnan(roll_thresh), self.threshold_, roll_thresh)
+            return (scores >= roll_thresh).astype(int)
+
+def calibrate_benign_quantile_threshold(
+    val_scores: np.ndarray,
+    y_val: np.ndarray,
+    alpha: float = 0.05
+) -> float:
+    """
+    Primary threshold rule for score-based detectors:
+    Chooses the decision threshold on BENIGN validation scores such that FAR <= alpha.
+    No F1 optimization or attack labels are used.
+    """
+    benign_mask = (y_val == 0)
+    benign_scores = val_scores[benign_mask] if np.any(benign_mask) else val_scores
+    clean_scores = benign_scores[np.isfinite(benign_scores)]
+    if len(clean_scores) == 0:
+        return 0.0
+
+    # Theoretical (1 - alpha) quantile
+    th = float(np.quantile(clean_scores, 1.0 - alpha))
+    
+    # Check empirical FAR on benign validation
+    emp_far = float(np.mean(clean_scores >= th))
+    if emp_far > alpha:
+        # Ties/point mass causing FAR to exceed alpha: step to next distinct score
+        higher_scores = clean_scores[clean_scores > th]
+        if len(higher_scores) > 0:
+            th = float(np.min(higher_scores))
+        else:
+            th = th + 1e-6
+    return th
 
 class EVTThreshold:
     """
