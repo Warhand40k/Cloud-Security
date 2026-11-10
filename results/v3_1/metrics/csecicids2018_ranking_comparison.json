@@ -1,0 +1,146 @@
+[
+  {
+    "Model":"Baseline: Isolation Forest",
+    "F1_CrossDay":0.2264150943,
+    "Rank_CrossDay":3,
+    "F1_WithinDay":0.2264150943,
+    "Rank_WithinDay":3,
+    "Block":"Thursday-15-02-2018"
+  },
+  {
+    "Model":"Baseline: ARIMA Residual",
+    "F1_CrossDay":0.0888888889,
+    "Rank_CrossDay":5,
+    "F1_WithinDay":0.0888888889,
+    "Rank_WithinDay":5,
+    "Block":"Thursday-15-02-2018"
+  },
+  {
+    "Model":"Config A (mSTAMP+Kneedle)",
+    "F1_CrossDay":0.4869565217,
+    "Rank_CrossDay":1,
+    "F1_WithinDay":0.4869565217,
+    "Rank_WithinDay":1,
+    "Block":"Thursday-15-02-2018"
+  },
+  {
+    "Model":"Config A-prime (Causal AB)",
+    "F1_CrossDay":0.0,
+    "Rank_CrossDay":6,
+    "F1_WithinDay":0.0,
+    "Rank_WithinDay":6,
+    "Block":"Thursday-15-02-2018"
+  },
+  {
+    "Model":"Config B1 (Adaptive MAD)",
+    "F1_CrossDay":0.1176470588,
+    "Rank_CrossDay":4,
+    "F1_WithinDay":0.1176470588,
+    "Rank_WithinDay":4,
+    "Block":"Thursday-15-02-2018"
+  },
+  {
+    "Model":"Config B2 (Adaptive EVT)",
+    "F1_CrossDay":0.4411764706,
+    "Rank_CrossDay":2,
+    "F1_WithinDay":0.4411764706,
+    "Rank_WithinDay":2,
+    "Block":"Thursday-15-02-2018"
+  },
+  {
+    "Model":"Baseline: Isolation Forest",
+    "F1_CrossDay":0.6571428571,
+    "Rank_CrossDay":1,
+    "F1_WithinDay":0.1538461538,
+    "Rank_WithinDay":2,
+    "Block":"Friday-16-02-2018"
+  },
+  {
+    "Model":"Baseline: ARIMA Residual",
+    "F1_CrossDay":0.0,
+    "Rank_CrossDay":5,
+    "F1_WithinDay":0.0,
+    "Rank_WithinDay":6,
+    "Block":"Friday-16-02-2018"
+  },
+  {
+    "Model":"Config A (mSTAMP+Kneedle)",
+    "F1_CrossDay":0.3103448276,
+    "Rank_CrossDay":3,
+    "F1_WithinDay":0.0784313725,
+    "Rank_WithinDay":3,
+    "Block":"Friday-16-02-2018"
+  },
+  {
+    "Model":"Config A-prime (Causal AB)",
+    "F1_CrossDay":0.5087719298,
+    "Rank_CrossDay":2,
+    "F1_WithinDay":0.1923076923,
+    "Rank_WithinDay":1,
+    "Block":"Friday-16-02-2018"
+  },
+  {
+    "Model":"Config B1 (Adaptive MAD)",
+    "F1_CrossDay":0.0983606557,
+    "Rank_CrossDay":4,
+    "F1_WithinDay":0.0377358491,
+    "Rank_WithinDay":5,
+    "Block":"Friday-16-02-2018"
+  },
+  {
+    "Model":"Config B2 (Adaptive EVT)",
+    "F1_CrossDay":0.0,
+    "Rank_CrossDay":5,
+    "F1_WithinDay":0.0784313725,
+    "Rank_WithinDay":3,
+    "Block":"Friday-16-02-2018"
+  },
+  {
+    "Model":"Baseline: Isolation Forest",
+    "F1_CrossDay":0.985915493,
+    "Rank_CrossDay":1,
+    "F1_WithinDay":0.0,
+    "Rank_WithinDay":5,
+    "Block":"Wednesday-21-02-2018"
+  },
+  {
+    "Model":"Baseline: ARIMA Residual",
+    "F1_CrossDay":0.985915493,
+    "Rank_CrossDay":1,
+    "F1_WithinDay":0.985915493,
+    "Rank_WithinDay":1,
+    "Block":"Wednesday-21-02-2018"
+  },
+  {
+    "Model":"Config A (mSTAMP+Kneedle)",
+    "F1_CrossDay":0.347826087,
+    "Rank_CrossDay":4,
+    "F1_WithinDay":0.3111111111,
+    "Rank_WithinDay":3,
+    "Block":"Wednesday-21-02-2018"
+  },
+  {
+    "Model":"Config A-prime (Causal AB)",
+    "F1_CrossDay":0.7384615385,
+    "Rank_CrossDay":3,
+    "F1_WithinDay":0.2790697674,
+    "Rank_WithinDay":4,
+    "Block":"Wednesday-21-02-2018"
+  },
+  {
+    "Model":"Config B1 (Adaptive MAD)",
+    "F1_CrossDay":0.2608695652,
+    "Rank_CrossDay":6,
+    "F1_WithinDay":0.0,
+    "Rank_WithinDay":5,
+    "Block":"Wednesday-21-02-2018"
+  },
+  {
+    "Model":"Config B2 (Adaptive EVT)",
+    "F1_CrossDay":0.3111111111,
+    "Rank_CrossDay":5,
+    "F1_WithinDay":0.3846153846,
+    "Rank_WithinDay":2,
+    "Block":"Wednesday-21-02-2018"
+  }
+]

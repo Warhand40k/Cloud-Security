@@ -30,11 +30,12 @@ def compute_clopper_pearson_ci(k: int, n: int, confidence: float = 0.95) -> Tupl
 def find_campaign_intervals(y_true: np.ndarray, gap_tolerance: int = 0) -> List[Tuple[int, int]]:
     """
     Identifies attack campaign intervals [start, end] (inclusive) in a binary label sequence.
-    A campaign is defined as a contiguous sequence of attack-positive windows (or flows).
-    When gap_tolerance > 0, adjacent positive runs separated by <= gap_tolerance benign
-    steps are merged into a single campaign.
-    Default gap_tolerance = 0 (strictly contiguous attack windows/flows; any normal window
-    marks the end of a campaign).
+    
+    Campaign Definition Policy:
+    1. A campaign is strictly defined as a contiguous run of attack-positive windows/flows (Label == 1).
+    2. Default gap_tolerance = 0: any intervening normal window/flow (Label == 0) terminates the campaign.
+    3. Clipped to slice: campaigns are strictly evaluated within the boundaries of the given slice (y_true).
+       Attack activity outside the evaluated slice is not bridged or counted.
     """
     atk_indices = np.where(y_true == 1)[0]
     if len(atk_indices) == 0:

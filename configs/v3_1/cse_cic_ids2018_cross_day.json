@@ -1,0 +1,52 @@
+{
+  "dataset": "CSE-CIC-IDS2018",
+  "protocol": "cross_day_primary",
+  "window_sec": 60,
+  "subseq_len_m": 10,
+  "scaler_type": "standard",
+  "random_seed": 42,
+  "min_train_windows": 100,
+  "min_library_subsequences": 100,
+  "blocks": [
+    {
+      "day": "Thursday-15-02-2018",
+      "design": "cross_day_anchor",
+      "attacks": ["GoldenEye", "Slowloris"],
+      "reference_source": "Thursday morning pure benign",
+      "reference_file": "data/processed/csecicids2018_thursday_60s_regular.parquet",
+      "reference_slice": [0, 250],
+      "val_file": "data/processed/csecicids2018_thursday_60s_regular.parquet",
+      "val_slice": [250, 558],
+      "test_file": "data/processed/csecicids2018_thursday_60s_regular.parquet",
+      "test_slice": [558, 720]
+    },
+    {
+      "day": "Friday-16-02-2018",
+      "design": "cross_day",
+      "attacks": ["Hulk", "SlowHTTPTest"],
+      "reference_source": "Thursday-15 pure benign (earlier day)",
+      "reference_file": "data/processed/csecicids2018_thursday_60s_regular.parquet",
+      "reference_slice": [0, 507],
+      "val_file": "data/processed/csecicids2018_friday_60s_regular.parquet",
+      "val_slice": [0, 552],
+      "test_file": "data/processed/csecicids2018_friday_60s_regular.parquet",
+      "test_slice": [552, 719]
+    },
+    {
+      "day": "Wednesday-21-02-2018",
+      "design": "cross_day",
+      "attacks": ["HOIC", "LOIC-UDP"],
+      "reference_source": "Thursday-15 pure benign (earlier day)",
+      "reference_file": "data/processed/csecicids2018_thursday_60s_regular.parquet",
+      "reference_slice": [0, 507],
+      "val_file": "data/processed/csecicids2018_wednesday_60s_regular.parquet",
+      "val_slice": [0, 459],
+      "test_file": "data/processed/csecicids2018_wednesday_60s_regular.parquet",
+      "test_slice": [459, 529]
+    }
+  ],
+  "mad_c_candidates": [1.5, 2.0, 2.5, 3.0, 3.5],
+  "evt_q": 0.80,
+  "evt_risk_candidates": [0.10, 0.05, 0.02, 0.01, 0.005, 0.001],
+  "persistence_k_candidates": [1, 2, 3, 4, 5]
+}
