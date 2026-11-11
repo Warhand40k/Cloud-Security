@@ -1,0 +1,2748 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mSTAMP Audit — Cloud SRE & Security Presentation</title>
+  <style>
+    :root {
+      --navy: #0B1F3A;
+      --navy-mid: #163258;
+      --teal: #0FA3B1;
+      --teal-tint: #E8F6F8;
+      --crimson: #D64045;
+      --crimson-tint: #FCEEEE;
+      --green: #2E9E5B;
+      --green-tint: #EBF7F0;
+      --charcoal: #222B36;
+      --bg-light: #F7F9FB;
+      --slate: #6B7785;
+      --border: #D8E1EB;
+      --row-alt: #F0F4F8;
+      --amber: #D97706;
+      --amber-tint: #FEF3C7;
+      --white: #FFFFFF;
+      --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      background: #060E1A;
+      font-family: var(--font-main);
+      color: var(--charcoal);
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* Viewport wrapper centers & scales 1280x720 stage */
+    #viewport {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 50% 35%, #112746 0%, #060E1A 100%);
+    }
+
+    #stage {
+      position: relative;
+      width: 1280px;
+      height: 720px;
+      transform-origin: center center;
+      box-shadow: 0 28px 90px rgba(0, 0, 0, 0.65);
+      border-radius: 6px;
+      overflow: hidden;
+      background: var(--bg-light);
+    }
+
+    /* Individual slides */
+    .slide {
+      position: absolute;
+      inset: 0;
+      width: 1280px;
+      height: 720px;
+      padding: 34px 57.6px 40px 57.6px;
+      /* 0.6in = 57.6px */
+      background: var(--bg-light);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.32s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .slide.active {
+      opacity: 1;
+      pointer-events: auto;
+      z-index: 2;
+    }
+
+    .slide.dark {
+      background: var(--navy);
+      color: var(--white);
+    }
+
+    /* Fragment animations (Section 0.5) */
+    .frag {
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    .frag.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .takeaway.frag {
+      transform: none;
+      transition: opacity 0.4s ease;
+    }
+
+    /* Header & Footer */
+    .slide-header {
+      position: relative;
+      padding-bottom: 10px;
+      margin-bottom: 16px;
+      border-bottom: 3px solid var(--teal);
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .slide-header .sec-tag {
+      font-size: 11pt;
+      font-weight: 700;
+      color: var(--teal);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 2px;
+    }
+
+    .slide-header h1 {
+      font-size: 29pt;
+      font-weight: 800;
+      color: var(--navy);
+      line-height: 1.12;
+    }
+
+    .slide.dark .slide-header h1 {
+      color: var(--white);
+    }
+
+    /* Pathology Progress Tracker (Slides 11-16) */
+    .tracker {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      margin-bottom: 4px;
+      flex-shrink: 0;
+    }
+
+    .tracker .t-pill {
+      padding: 6px 8px;
+      border-radius: 7px;
+      font-size: 10pt;
+      font-weight: 700;
+      border: 1.5px solid var(--border);
+      background: var(--white);
+      color: var(--slate);
+      white-space: nowrap;
+    }
+
+    .tracker .t-pill.done {
+      background: var(--crimson-tint);
+      border-color: var(--crimson);
+      color: var(--crimson);
+    }
+
+    .tracker .t-pill.current {
+      background: var(--crimson);
+      border-color: var(--crimson);
+      color: var(--white);
+    }
+
+    .slide-body {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .slide-footer {
+      position: absolute;
+      left: 57.6px;
+      right: 57.6px;
+      bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10pt;
+      color: var(--slate);
+    }
+
+    .slide.dark .slide-footer {
+      color: #9EAEC2;
+    }
+
+    .slide-footer .f-num {
+      font-weight: 700;
+    }
+
+    /* Takeaway bar */
+    .takeaway {
+      margin-top: auto;
+      background: var(--navy);
+      color: var(--white);
+      border-radius: 10px;
+      padding: 11px 22px;
+      font-size: 17.5pt;
+      line-height: 1.25;
+      box-shadow: 0 4px 14px rgba(11, 31, 58, 0.16);
+      flex-shrink: 0;
+    }
+
+    .takeaway strong {
+      color: var(--teal);
+      font-weight: 700;
+    }
+
+    /* Common cards & layout helpers */
+    .card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 4px 16px rgba(11, 31, 58, 0.06);
+    }
+
+    .fig-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 4px 16px rgba(11, 31, 58, 0.07);
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .fig-card img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .b2-table th,
+    .b2-table td {
+      font-size: 11pt !important;
+      padding: 5.5px 6px !important;
+      white-space: nowrap;
+    }
+
+    .fig-caption {
+      font-size: 13.5pt;
+      font-style: italic;
+      color: var(--slate);
+      text-align: center;
+      margin-top: 6px;
+      flex-shrink: 0;
+    }
+
+    .code {
+      font-family: var(--font-mono);
+      font-size: 0.88em;
+      background: rgba(11, 31, 58, 0.07);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .math-box {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 18px;
+      box-shadow: 0 3px 12px rgba(11, 31, 58, 0.05);
+    }
+
+    .math-label {
+      font-size: 15pt;
+      font-weight: 700;
+      color: var(--teal);
+      margin-bottom: 4px;
+    }
+
+    .math-eq {
+      font-size: 19pt;
+      font-weight: 600;
+      color: var(--navy);
+      font-family: 'Cambria Math', 'Latin Modern Math', Georgia, serif;
+    }
+
+    /* Tables */
+    table.clean-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--white);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 3px 12px rgba(11, 31, 58, 0.06);
+    }
+
+    table.clean-table th {
+      background: var(--navy);
+      color: var(--white);
+      font-weight: 700;
+      padding: 9px 10px;
+      text-align: center;
+      font-size: 15pt;
+    }
+
+    table.clean-table th:first-child {
+      text-align: left;
+    }
+
+    table.clean-table td {
+      padding: 8px 10px;
+      text-align: center;
+      font-size: 16pt;
+      border-bottom: 1px solid var(--border);
+      color: var(--charcoal);
+    }
+
+    table.clean-table td:first-child {
+      text-align: left;
+      font-weight: 600;
+    }
+
+    table.clean-table tr:nth-child(even) td {
+      background: var(--row-alt);
+    }
+
+    table.clean-table tr.oracle td {
+      font-style: italic;
+      color: var(--slate);
+    }
+
+    table.clean-table tr.good-row td {
+      background: var(--green-tint) !important;
+    }
+
+    table.clean-table tr.bad-row td {
+      background: var(--crimson-tint) !important;
+    }
+
+    .c-green {
+      color: var(--green) !important;
+      font-weight: 700;
+    }
+
+    .c-crimson {
+      color: var(--crimson) !important;
+      font-weight: 700;
+    }
+
+    .c-teal {
+      color: var(--teal) !important;
+      font-weight: 700;
+    }
+
+    .c-navy {
+      color: var(--navy) !important;
+      font-weight: 700;
+    }
+
+    /* Bullet lists */
+    ul.bullets {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    ul.bullets li {
+      position: relative;
+      padding-left: 22px;
+      font-size: 19pt;
+      line-height: 1.28;
+      color: var(--charcoal);
+    }
+
+    ul.bullets li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      top: -1px;
+      color: var(--teal);
+      font-weight: 900;
+      font-size: 21pt;
+    }
+
+    ul.bullets.crimson li::before {
+      color: var(--crimson);
+    }
+
+    ul.bullets.green li::before {
+      color: var(--green);
+    }
+
+    /* HUD Controls (outside print) */
+    #hud {
+      position: fixed;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(11, 31, 58, 0.90);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(15, 163, 177, 0.35);
+      border-radius: 999px;
+      padding: 6px 14px;
+      color: var(--white);
+      font-size: 13px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+      transition: opacity 0.25s ease;
+    }
+
+    #hud button {
+      background: rgba(255, 255, 255, 0.10);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: var(--white);
+      padding: 5px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: var(--font-main);
+    }
+
+    #hud button:hover {
+      background: var(--teal);
+      border-color: var(--teal);
+    }
+
+    #hud button.active-btn {
+      background: var(--teal);
+      border-color: var(--teal);
+    }
+
+    #hud .hud-counter {
+      font-weight: 700;
+      padding: 0 8px;
+      min-width: 72px;
+      text-align: center;
+      color: #DCE7F5;
+    }
+
+    #hud .progress-track {
+      width: 110px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.18);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    #hud .progress-fill {
+      height: 100%;
+      background: var(--teal);
+      width: 0%;
+      transition: width 0.2s ease;
+    }
+
+    /* Speaker Notes Drawer */
+    #notes-drawer {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      width: 390px;
+      max-height: 280px;
+      overflow-y: auto;
+      z-index: 60;
+      background: rgba(11, 31, 58, 0.95);
+      color: var(--white);
+      border: 1px solid var(--teal);
+      border-radius: 12px;
+      padding: 14px 16px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+      display: none;
+    }
+
+    #notes-drawer.open {
+      display: block;
+    }
+
+    #notes-drawer h4 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--teal);
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    #notes-drawer p {
+      font-size: 14px;
+      line-height: 1.48;
+      color: #E2EAF4;
+    }
+
+    /* Grid Overview Modal */
+    #grid-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      background: rgba(6, 14, 26, 0.94);
+      overflow-y: auto;
+      padding: 28px 40px 70px;
+      display: none;
+    }
+
+    #grid-modal.open {
+      display: block;
+    }
+
+    .grid-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--white);
+      margin-bottom: 20px;
+    }
+
+    .grid-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 16px;
+    }
+
+    .grid-item {
+      background: #132847;
+      border: 2px solid transparent;
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: var(--white);
+      cursor: pointer;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+
+    .grid-item:hover {
+      border-color: var(--teal);
+      transform: translateY(-2px);
+    }
+
+    .grid-item.current {
+      border-color: var(--teal);
+      background: #193760;
+    }
+
+    .grid-item.backup {
+      border-left: 4px solid var(--amber);
+    }
+
+    .grid-item.hidden-speaker {
+      border-left: 4px solid var(--crimson);
+    }
+
+    .grid-item .g-num {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--teal);
+      margin-bottom: 4px;
+    }
+
+    .grid-item .g-title {
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    @media print {
+      @page {
+        size: 1280px 720px;
+        margin: 0;
+      }
+
+      html,
+      body {
+        background: white;
+        overflow: visible;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      #hud,
+      #notes-drawer,
+      #grid-modal {
+        display: none !important;
+      }
+
+      #viewport {
+        position: static;
+        display: block;
+        background: none;
+      }
+
+      #stage {
+        width: auto;
+        height: auto;
+        transform: none !important;
+        box-shadow: none;
+        overflow: visible;
+      }
+
+      .slide {
+        position: relative !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        page-break-after: always;
+        break-after: page;
+      }
+
+      .frag {
+        opacity: 1 !important;
+        transform: none !important;
+      }
+
+      .slide.speaker-hidden {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="viewport">
+    <div id="stage">
+
+      <!-- SLIDE 1: TITLE -->
+      <section class="slide dark active" data-num="1" data-title="Title" data-time="0:30"
+        data-notes="We took a published cloud-security method that reported 99.6% accuracy, re-implemented it with strict leakage-free rules, and audited what actually holds up.">
+        <!-- Decorative abstract network & time-series SVG (15% opacity) -->
+        <svg viewBox="0 0 460 660"
+          style="position:absolute; right:18px; top:30px; width:430px; height:640px; opacity:0.16; pointer-events:none;">
+          <g stroke="#0FA3B1" stroke-width="2" fill="none">
+            <line x1="60" y1="80" x2="190" y2="140" />
+            <line x1="190" y1="140" x2="360" y2="70" />
+            <line x1="60" y1="80" x2="110" y2="250" />
+            <line x1="190" y1="140" x2="250" y2="240" />
+            <line x1="360" y1="70" x2="390" y2="210" />
+            <line x1="110" y1="250" x2="250" y2="240" />
+            <line x1="250" y1="240" x2="390" y2="210" />
+            <line x1="110" y1="250" x2="70" y2="390" />
+            <line x1="250" y1="240" x2="210" y2="370" />
+            <line x1="390" y1="210" x2="360" y2="410" />
+            <line x1="70" y1="390" x2="210" y2="370" />
+            <line x1="210" y1="370" x2="360" y2="410" />
+            <polyline points="20,580 55,545 90,565 130,490 170,555 210,445 250,535 295,565 340,515 385,550 430,520"
+              stroke-width="3" />
+          </g>
+          <g fill="#0FA3B1">
+            <circle cx="60" cy="80" r="6" />
+            <circle cx="190" cy="140" r="6" />
+            <circle cx="360" cy="70" r="6" />
+            <circle cx="110" cy="250" r="6" />
+            <circle cx="250" cy="240" r="6" />
+            <circle cx="390" cy="210" r="6" />
+            <circle cx="70" cy="390" r="6" />
+            <circle cx="210" cy="370" r="6" />
+            <circle cx="360" cy="410" r="6" />
+          </g>
+        </svg>
+        <div style="margin-top:64px; max-width:850px;">
+          <div style="font-size:13pt; font-weight:700; color:var(--teal); letter-spacing:0.08em; margin-bottom:20px;">
+            CLOUD SRE &amp; SECURITY · METHODOLOGICAL AUDIT
+          </div>
+          <h1 style="font-size:35pt; font-weight:800; line-height:1.16; color:var(--white); margin-bottom:28px;">
+            Reproduction, Causal Extension, and Methodological Audit of Multidimensional Matrix Profile for Network
+            Anomaly Detection in Cloud Environments
+          </h1>
+          <div style="width:280px; height:4px; background:var(--teal); margin-bottom:28px;"></div>
+          <div style="font-size:21pt; font-weight:700; color:var(--white); margin-bottom:10px;">
+            Aalok Kumar &nbsp;·&nbsp; Aditya Sahrawat &nbsp;·&nbsp; Amal Mohanan
+            <br>
+            23bcs003 &nbsp;·&nbsp; 23bcs006 &nbsp;·&nbsp; 23bcs012
+          </div>
+          <div style="font-size:18pt; color:#B8C6D9;">
+            Department of Computer Science and Engineering, IIIT Dharwad &nbsp;·&nbsp; November 2026
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 2: AGENDA -->
+      <section class="slide" data-num="2" data-title="Agenda" data-time="0:30"
+        data-notes="Say that the talk is 'audit first, then fix attempts, then real-system check.'">
+        <div class="slide-header">
+          <div>
+            <div class="sec-tag">Overview</div>
+            <h1>Agenda</h1>
+          </div>
+        </div>
+        <div class="slide-body" style="flex-direction:row; gap:28px; align-items:stretch;">
+          <div style="flex:1.05; display:flex; flex-direction:column; justify-content:space-between; padding:6px 0;">
+            <div style="display:flex; gap:16px; align-items:center;">
+              <div
+                style="width:48px; height:48px; border-radius:10px; background:var(--navy); color:#fff; font-weight:800; font-size:20pt; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                1</div>
+              <div>
+                <div style="font-size:20pt; font-weight:700; color:var(--navy);">Why this problem matters</div>
+                <div style="font-size:16.5pt; color:var(--slate);">The cloud telemetry trilemma &amp; base-paper gaps
+                </div>
+              </div>
+            </div>
+            <div style="display:flex; gap:16px; align-items:center;">
+              <div
+                style="width:48px; height:48px; border-radius:10px; background:var(--navy); color:#fff; font-weight:800; font-size:20pt; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                2</div>
+              <div>
+                <div style="font-size:20pt; font-weight:700; color:var(--navy);">The method we reproduced</div>
+                <div style="font-size:16.5pt; color:var(--slate);">mSTAMP + Kneedle &amp; causal Config A-prime</div>
+              </div>
+            </div>
+            <div style="display:flex; gap:16px; align-items:center;">
+              <div
+                style="width:48px; height:48px; border-radius:10px; background:var(--crimson); color:#fff; font-weight:800; font-size:20pt; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                3</div>
+              <div>
+                <div style="font-size:20pt; font-weight:700; color:var(--navy);">Methodological audit</div>
+                <div style="font-size:16.5pt; color:var(--slate);">What went wrong and why (5 pathologies)</div>
+              </div>
+            </div>
+            <div style="display:flex; gap:16px; align-items:center;">
+              <div
+                style="width:48px; height:48px; border-radius:10px; background:var(--navy); color:#fff; font-weight:800; font-size:20pt; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                4</div>
+              <div>
+                <div style="font-size:20pt; font-weight:700; color:var(--navy);">Conformal calibration for false alarms
+                </div>
+                <div style="font-size:16.5pt; color:var(--slate);">Label-leakage audit &amp; matched-FPR trade-offs
+                </div>
+              </div>
+            </div>
+            <div style="display:flex; gap:16px; align-items:center;">
+              <div
+                style="width:48px; height:48px; border-radius:10px; background:var(--navy); color:#fff; font-weight:800; font-size:20pt; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                5</div>
+              <div>
+                <div style="font-size:20pt; font-weight:700; color:var(--navy);">Live testbed validation &amp;
+                  guidelines</div>
+                <div style="font-size:16.5pt; color:var(--slate);">Flash crowds, augmentation, and SRE rules</div>
+              </div>
+            </div>
+          </div>
+          <div class="card"
+            style="flex:0.95; padding:26px; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:30px;">
+            <div style="font-size:18pt; font-weight:700; color:var(--teal); text-align:center;">
+              Audit First → Fix Attempts → Real-System Check
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; width:100%; justify-content:center;">
+              <div
+                style="background:var(--teal); color:#fff; border-radius:10px; padding:16px 10px; text-align:center; width:92px; font-weight:700; font-size:8pt;">
+                01<br />Trilemma</div>
+              <span style="color:var(--slate); font-weight:800; font-size:18pt;">→</span>
+              <div
+                style="background:var(--navy); color:#fff; border-radius:10px; padding:16px 10px; text-align:center; width:92px; font-weight:700; font-size:8pt;">
+                02<br />mSTAMP</div>
+              <span style="color:var(--slate); font-weight:800; font-size:18pt;">→</span>
+              <div
+                style="background:var(--crimson); color:#fff; border-radius:10px; padding:16px 10px; text-align:center; width:92px; font-weight:700; font-size:8pt;">
+                03<br />5 Audits</div>
+              <span style="color:var(--slate); font-weight:800; font-size:18pt;">→</span>
+              <div
+                style="background:var(--amber); color:#fff; border-radius:10px; padding:16px 10px; text-align:center; width:92px; font-weight:700; font-size:8pt;">
+                04<br />Conformal</div>
+              <span style="color:var(--slate); font-weight:800; font-size:18pt;">→</span>
+              <div
+                style="background:var(--green); color:#fff; border-radius:10px; padding:16px 10px; text-align:center; width:92px; font-weight:700; font-size:8pt;">
+                05<br />Testbed</div>
+            </div>
+
+          </div>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">2</span></div>
+      </section>
+
+      <!-- SLIDE 3: THE CLOUD TELEMETRY TRILEMMA -->
+      <section class="slide" data-num="3" data-title="The Cloud Telemetry Trilemma" data-time="1:15"
+        data-notes="Explain that SRE and SOC teams need all three at once, and that most benchmark papers only report accuracy. Cite Sommer & Paxson [6] for the gap between lab and production.">
+        <div class="slide-header">
+          <div>
+            <div class="sec-tag">Section B · Motivation</div>
+            <h1>The Cloud Telemetry Trilemma</h1>
+          </div>
+        </div>
+        <div class="slide-body">
+          <div style="font-size:17.5pt; font-style:italic; color:var(--slate); margin-bottom:22px;">
+            Telemetry sources: AWS VPC Flow Logs, IPFIX, Prometheus metrics.
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:26px; flex:1;">
+            <div class="card"
+              style="border-top:10px solid var(--teal); padding:32px 24px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:20px;">
+              <div
+                style="width:94px; height:94px; border-radius:50%; background:var(--teal-tint); border:3px solid var(--teal); display:flex; align-items:center; justify-content:center; font-size:36pt; color:var(--teal);">
+                ◎</div>
+              <div style="font-size:23pt; font-weight:800; color:var(--navy);">High Sensitivity</div>
+              <div style="font-size:19.5pt; color:var(--charcoal); line-height:1.35;">Detect attacks fast (low Mean Time
+                to Detect).</div>
+            </div>
+            <div class="card"
+              style="border-top:10px solid var(--teal); padding:32px 24px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:20px;">
+              <div
+                style="width:94px; height:94px; border-radius:50%; background:var(--crimson-tint); border:3px solid var(--crimson); display:flex; align-items:center; justify-content:center; font-size:34pt; color:var(--crimson);">
+                🔕</div>
+              <div style="font-size:23pt; font-weight:800; color:var(--navy);">Strict FP Control</div>
+              <div style="font-size:19.5pt; color:var(--charcoal); line-height:1.35;">Avoid alert fatigue across 24/7
+                SOC operations.</div>
+            </div>
+            <div class="card"
+              style="border-top:10px solid var(--teal); padding:32px 24px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:20px;">
+              <div
+                style="width:94px; height:94px; border-radius:50%; background:var(--green-tint); border:3px solid var(--green); display:flex; align-items:center; justify-content:center; font-size:36pt; color:var(--green);">
+                ∿</div>
+              <div style="font-size:23pt; font-weight:800; color:var(--navy);">Non-Stationarity</div>
+              <div style="font-size:19.5pt; color:var(--charcoal); line-height:1.35;">Survive diurnal cycles, flash
+                crowds, and surges.</div>
+            </div>
+          </div>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">3</span></div>
+      </section>
+
+      <!-- SLIDE 4: THE BASE PAPER AND WHAT WAS LEFT UNSPECIFIED -->
+      <section class="slide" data-num="4" data-title="Base Paper & Specification Gaps" data-time="1:15"
+        data-notes="A 0.998 F1 is only meaningful if scores, thresholds, and splits are defined. These four gaps are what our audit probes.">
+        <div class="slide-header">
+          <div>
+            <div class="sec-tag">Section B · Motivation</div>
+            <h1>The Base Paper and What Was Left Unspecified</h1>
+          </div>
+        </div>
+        <div class="slide-body" style="flex-direction:row; gap:26px;">
+          <div class="card"
+            style="flex:1; background:var(--green-tint); border:2px solid var(--green); overflow:hidden; display:flex; flex-direction:column;">
+            <div style="background:var(--green); color:#fff; padding:12px 22px; font-size:21pt; font-weight:700;">What
+              Was Claimed</div>
+            <div style="padding:28px; flex:1; display:flex; flex-direction:column; justify-content:center;">
+              <div style="font-size:21pt; font-weight:700; color:var(--navy); margin-bottom:22px; line-height:1.3;">
+                Al-Mazrawe &amp; Al-Musawi [1]<br />mSTAMP + Kneedle on UNSW-NB15
+              </div>
+              <div style="font-size:66pt; font-weight:800; color:var(--green); line-height:1.0; margin-bottom:16px;">
+                99.6%</div>
+              <div style="font-size:24pt; font-weight:700; color:var(--charcoal);">Accuracy, with F1 = 0.998</div>
+            </div>
+          </div>
+          <div class="card"
+            style="flex:1; background:var(--crimson-tint); border:2px solid var(--crimson); overflow:hidden; display:flex; flex-direction:column;">
+            <div style="background:var(--crimson); color:#fff; padding:12px 22px; font-size:21pt; font-weight:700;">What
+              Was Missing</div>
+            <div style="padding:34px 28px; flex:1; display:flex; align-items:center;">
+              <ul class="bullets crimson" style="gap:24px;">
+                <li><strong style="color:var(--navy);">Anomaly-score semantics</strong> undefined</li>
+                <li><strong style="color:var(--navy);">Threshold calibration</strong> unspecified</li>
+                <li><strong style="color:var(--navy);">Causal alignment</strong> unaddressed</li>
+                <li><strong style="color:var(--navy);">Chronological split integrity</strong> not guaranteed</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">4</span></div>
+      </section>
+
+      <!-- SLIDE 5: OUR CONTRIBUTIONS -->
+      <section class="slide" data-num="5" data-title="Our Contributions" data-time="1:15"
+        data-notes="Stress that the paper is honest about negative results, including mistakes in the authors' own pipeline.">
+        <div class="slide-header">
+          <div>
+            <div class="sec-tag">Section B · Motivation</div>
+            <h1>Our Contributions</h1>
+          </div>
+        </div>
+        <div class="slide-body" style="justify-content:space-between; padding-bottom:10px;">
+          <div class="card" style="padding:13px 20px; display:flex; align-items:center; gap:18px;">
+            <div
+              style="width:46px; height:46px; border-radius:10px; background:var(--teal); color:#fff; font-weight:800; font-size:19pt; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              1</div>
+            <div style="flex:1;"><strong style="font-size:19.5pt; color:var(--navy);">Leakage-free reproduction &amp;
+                audit:</strong> <span style="font-size:18.5pt;">causal alignment, chronological splits; 5 pathologies
+                diagnosed.</span></div>
+          </div>
+          <div class="card" style="padding:13px 20px; display:flex; align-items:center; gap:18px;">
+            <div
+              style="width:46px; height:46px; border-radius:10px; background:var(--teal); color:#fff; font-weight:800; font-size:19pt; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              2</div>
+            <div style="flex:1;"><strong style="font-size:19.5pt; color:var(--navy);">Config A-prime:</strong> <span
+                style="font-size:18.5pt;">causal streaming variant; Config A look-ahead quantified (50% val / 48%
+                test).</span></div>
+          </div>
+          <div class="card" style="padding:13px 20px; display:flex; align-items:center; gap:18px;">
+            <div
+              style="width:46px; height:46px; border-radius:10px; background:var(--crimson); color:#fff; font-weight:800; font-size:19pt; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              3</div>
+            <div style="flex:1;"><strong style="font-size:19.5pt; color:var(--navy);">Persistence filter:</strong> <span
+                style="font-size:18.5pt;">hurt F1 in 67.5% of 80 paired configurations.</span></div>
+            <span
+              style="background:var(--crimson-tint); border:1.5px solid var(--crimson); color:var(--crimson); font-size:11pt; font-weight:800; padding:5px 12px; border-radius:999px;">NEGATIVE
+              RESULT</span>
+          </div>
+          <div class="card" style="padding:13px 20px; display:flex; align-items:center; gap:18px;">
+            <div
+              style="width:46px; height:46px; border-radius:10px; background:var(--crimson); color:#fff; font-weight:800; font-size:19pt; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              4</div>
+            <div style="flex:1;"><strong style="font-size:19.5pt; color:var(--navy);">Conformal calibration:</strong>
+              <span style="font-size:18.5pt;">adaptive helps FPR variance, costs −17.9 to −23.9 pp recall.</span>
+            </div>
+            <span
+              style="background:var(--crimson-tint); border:1.5px solid var(--crimson); color:var(--crimson); font-size:11pt; font-weight:800; padding:5px 12px; border-radius:999px;">NEGATIVE
+              RESULT</span>
+          </div>
+          <div class="card" style="padding:13px 20px; display:flex; align-items:center; gap:18px;">
+            <div
+              style="width:46px; height:46px; border-radius:10px; background:var(--green); color:#fff; font-weight:800; font-size:19pt; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              5</div>
+            <div style="flex:1;"><strong style="font-size:19.5pt; color:var(--navy);">Testbed validation:</strong> <span
+                style="font-size:18.5pt;">25 campaigns × 5 seeds; Isolation Forest F1 = 0.841, 100% campaign
+                recall.</span></div>
+          </div>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">5</span></div>
+      </section>
+
+      <!-- SLIDE 6: BACKGROUND: RELATED WORK -->
+      <section class="slide" data-num="6" data-title="Background: Related Work" data-time="0:45"
+        data-notes="Keep to 30-45 seconds. Only point to remember: conformal guarantees assume exchangeability, which autocorrelated telemetry violates.">
+        <div class="slide-header">
+          <div>
+            <div class="sec-tag">Section B · Background</div>
+            <h1>Background: Related Work</h1>
+          </div>
+        </div>
+        <div class="slide-body" style="justify-content:center; gap:34px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div class="card"
+              style="flex:1; border:2px solid var(--teal); overflow:hidden; height:250px; display:flex; flex-direction:column;">
+              <div
+                style="background:var(--teal); color:#fff; padding:10px; font-weight:700; font-size:18pt; text-align:center;">
+                1. Matrix Profiles</div>
+              <div style="padding:20px 14px; font-size:18pt; text-align:center; line-height:1.45;">Yeh et al.
+                (2016)<br />mSTAMP (Yeh et al. 2017)<br />+ STUMPY</div>
+            </div>
+            <span style="font-size:24pt; font-weight:800; color:var(--teal);">→</span>
+            <div class="card"
+              style="flex:1; border:2px solid var(--navy); overflow:hidden; height:250px; display:flex; flex-direction:column;">
+              <div
+                style="background:var(--navy); color:#fff; padding:10px; font-weight:700; font-size:18pt; text-align:center;">
+                2. Knee Selection</div>
+              <div style="padding:20px 14px; font-size:18pt; text-align:center; line-height:1.45;">Kneedle<br />Satopaa
+                et al. (2011)<br />Max curvature k*</div>
+            </div>
+            <span style="font-size:24pt; font-weight:800; color:var(--teal);">→</span>
+            <div class="card"
+              style="flex:1; border:2px solid var(--green); overflow:hidden; height:250px; display:flex; flex-direction:column;">
+              <div
+                style="background:var(--green); color:#fff; padding:10px; font-weight:700; font-size:18pt; text-align:center;">
+                3. Cloud Detectors</div>
+              <div style="padding:20px 14px; font-size:18pt; text-align:center; line-height:1.45;">
+                ARIMA(1,0,1)<br />Isolation Forest<br />Tabular / time-series</div>
+            </div>
+            <span style="font-size:24pt; font-weight:800; color:var(--teal);">→</span>
+            <div class="card"
+              style="flex:1; border:2px solid var(--amber); overflow:hidden; height:250px; display:flex; flex-direction:column;">
+              <div
+                style="background:var(--amber); color:#fff; padding:10px; font-weight:700; font-size:18pt; text-align:center;">
+                4. Conformal &amp; ACI</div>
+              <div style="padding:20px 14px; font-size:18pt; text-align:center; line-height:1.45;">Vovk; Angelopoulos
+                &amp; Bates<br />ACI (Gibbs &amp; Candès 2021)</div>
+            </div>
+          </div>
+          <div
+            style="background:var(--amber-tint); border:1.5px solid var(--amber); border-radius:10px; padding:14px 24px; font-size:18.5pt; font-weight:700; text-align:center;">
+            High-dimensional distance concentration erodes contrast [Beyer et al. 1999].
+          </div>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">6</span></div>
+      </section>
+
+      <!-- SLIDE 7: mSTAMP + KNEEDLE PIPELINE -->
+      <section class="slide" data-num="7" data-title="mSTAMP + Kneedle Pipeline" data-time="1:30"
+        data-notes="Explain in plain words: for each time window, find its nearest look-alike elsewhere; if even the closest match is far, it is a discord (anomaly). Kneedle then chooses how many dimensions to use by finding the 'elbow' in the discord curve.">
+        <div class="slide-header">
+          <div>
+            <div class="sec-tag">Section C · Method</div>
+            <h1>mSTAMP + Kneedle Pipeline</h1>
+          </div>
+        </div>
+        <div class="slide-body" style="gap:16px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div
+              style="flex:1; background:var(--navy); color:#fff; border-radius:10px; padding:16px 8px; text-align:center; font-size:17pt; font-weight:700;">
+              Telemetry</div>
+            <span style="color:var(--teal); font-weight:900; font-size:18pt;">→</span>
+            <div
+              style="flex:1.15; background:var(--navy); color:#fff; border-radius:10px; padding:16px 8px; text-align:center; font-size:17pt; font-weight:700;">
+              Windowing<br /><span style="font-weight:400; font-size:14pt;">(d features)</span></div>
+            <span style="color:var(--teal); font-weight:900; font-size:18pt;">→</span>
+            <div
+              style="flex:1.25; background:var(--navy); color:#fff; border-radius:10px; padding:16px 8px; text-align:center; font-size:17pt; font-weight:700;">
+              mSTAMP<br /><span style="font-weight:400; font-size:14pt;">Discord profile</span></div>
+            <span style="color:var(--teal); font-weight:900; font-size:18pt;">→</span>
+            <div
+              style="flex:1.25; background:var(--teal); color:#fff; border-radius:10px; padding:16px 8px; text-align:center; font-size:17pt; font-weight:700;">
+              Kneedle<br /><span style="font-weight:400; font-size:14pt;">picks k*</span></div>
+            <span style="color:var(--teal); font-weight:900; font-size:18pt;">→</span>
+            <div
+              style="flex:1.15; background:var(--navy); color:#fff; border-radius:10px; padding:16px 8px; text-align:center; font-size:17pt; font-weight:700;">
+              Threshold<br /><span style="font-weight:400; font-size:14pt;">→ Alert</span></div>
+          </div>
+          <div style="display:flex; gap:20px; flex:1; min-height:0;">
+            <div style="flex:1.65; display:flex; flex-direction:column; gap:14px; justify-content:center;">
+              <div class="math-box">
+                <div class="math-label">Equation (2): Cumulative k-dimensional discord profile</div>
+                <div class="math-eq"><i>P<sub>i</sub></i><sup>(<i>k</i>)</sup> = min<sub><i>j</i> ≠ <i>i</i></sub>
+                  &Sigma;<sub><i>l</i>=1..<i>k</i></sub> <i>d</i><sub>(<i>l</i>)</sub>(<i>i</i>, <i>j</i>)</div>
+              </div>
+              <div class="math-box">
+                <div class="math-label">Equation (3): Kneedle subspace dimension selection</div>
+                <div class="math-eq"><i>k</i>* = argmax<sub><i>k</i></sub> [ (<i>y<sub>k</sub></i> −
+                  <i>y</i><sub>1</sub>)/(<i>y<sub>d</sub></i> − <i>y</i><sub>1</sub>) − (<i>k</i> − 1)/(<i>d</i> − 1) ],
+                  &nbsp; <i>y<sub>k</sub></i> = max<sub><i>i</i></sub> <i>P<sub>i</sub></i><sup>(<i>k</i>)</sup>
+                </div>
+              </div>
+              <div style="font-size:17pt; font-style:italic; color:var(--slate);">
+                Footnote: Concavity is an empirical observation, not a theorem.
+              </div>
+            </div>
+            <div class="fig-card" style="flex:1; min-height:0;">
+              <img src="./assets/kneedle_selection_curve.png" alt="Kneedle selection curve" style="max-height:270px;" />
+              <div class="fig-caption">Kneedle selection curve (our run)</div>
+            </div>
+          </div>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">7</span></div>
+      </section>
+
+      <!-- SLIDE 8: LOOK-AHEAD BIAS: CONFIG A VS CONFIG A-PRIME -->
+      <section class="slide" data-num="8" data-title="Look-Ahead Bias: Config A vs A-prime" data-time="1:30"
+        data-notes="This is a key conceptual slide. Config A is not deployable in streaming because it peeks ahead; A-prime fixes that but has a price.">
+        <div class="slide-header">
+          <div>
+            <div class="sec-tag">Section C · Method</div>
+            <h1>Look-Ahead Bias: Config A vs Config A-prime</h1>
+          </div>
+        </div>
+        <div class="slide-body" style="flex-direction:row; gap:24px;">
+          <div class="card"
+            style="flex:1; border:2px solid var(--crimson); overflow:hidden; display:flex; flex-direction:column;">
+            <div style="background:var(--crimson); color:#fff; padding:11px 18px; font-size:20pt; font-weight:700;">
+              Config A (Self-Join) — Non-Causal</div>
+            <div style="padding:20px; flex:1; display:flex; flex-direction:column; justify-content:space-between;">
+              <svg viewBox="0 0 480 140" style="width:100%; height:135px;">
+                <line x1="25" y1="95" x2="455" y2="95" stroke="#0B1F3A" stroke-width="3" />
+                <path d="M 135 65 Q 250 5 360 65" fill="none" stroke="#D64045" stroke-width="4"
+                  marker-end="url(#arrRed)" />
+                <defs>
+                  <marker id="arrRed" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L8,3 z" fill="#D64045" />
+                  </marker>
+                </defs>
+                <rect x="95" y="72" width="76" height="34" rx="6" fill="#0B1F3A" />
+                <text x="133" y="95" text-anchor="middle" fill="#fff" font-weight="700" font-size="18">t</text>
+                <rect x="330" y="72" width="84" height="34" rx="6" fill="#D64045" />
+                <text x="372" y="95" text-anchor="middle" fill="#fff" font-weight="700" font-size="18">t′ &gt; t</text>
+                <text x="250" y="25" text-anchor="middle" fill="#D64045" font-weight="800" font-size="14">FUTURE
+                  LOOK-AHEAD →</text>
+              </svg>
+              <div style="font-size:18.5pt; font-weight:700; color:var(--crimson); text-align:center;">Nearest neighbour
+                can lie in the future.</div>
+              <div style="background:var(--crimson-tint); border-radius:10px; padding:18px; text-align:center;">
+                <div style="font-size:38pt; font-weight:800; color:var(--crimson);">50% val / 48% test</div>
+                <div style="font-size:17.5pt; color:var(--charcoal); margin-top:4px;">windows had future nearest
+                  neighbours</div>
+              </div>
+            </div>
+          </div>
+          <div class="card"
+            style="flex:1; border:2px solid var(--green); overflow:hidden; display:flex; flex-direction:column;">
+            <div style="background:var(--green); color:#fff; padding:11px 18px; font-size:20pt; font-weight:700;">Config
+              A-prime (Causal AB-Join) — Streaming</div>
+            <div style="padding:20px; flex:1; display:flex; flex-direction:column; justify-content:space-between;">
+              <svg viewBox="0 0 480 140" style="width:100%; height:135px;">
+                <line x1="25" y1="95" x2="455" y2="95" stroke="#0B1F3A" stroke-width="3" />
+                <path d="M 380 65 Q 270 8 175 65" fill="none" stroke="#2E9E5B" stroke-width="4"
+                  marker-end="url(#arrGreen)" />
+                <defs>
+                  <marker id="arrGreen" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L8,3 z" fill="#2E9E5B" />
+                  </marker>
+                </defs>
+                <rect x="40" y="66" width="160" height="44" rx="6" fill="#EBF7F0" stroke="#2E9E5B" stroke-width="2" />
+                <text x="120" y="94" text-anchor="middle" fill="#2E9E5B" font-weight="700" font-size="16">Train Ref.
+                  ℛ</text>
+                <rect x="350" y="72" width="76" height="34" rx="6" fill="#0B1F3A" />
+                <text x="388" y="95" text-anchor="middle" fill="#fff" font-weight="700" font-size="18">t</text>
+                <text x="275" y="25" text-anchor="middle" fill="#2E9E5B" font-weight="800" font-size="14">← PAST
+                  ONLY</text>
+              </svg>
+              <div style="font-size:18.5pt; font-weight:700; color:var(--green); text-align:center;">Points only back
+                into training library ℛ.</div>
+              <div style="background:var(--teal-tint); border-radius:10px; padding:16px; text-align:center;">
+                <div class="math-eq" style="font-size:19pt;">Eq. (4): &nbsp;<i>S</i>(<i>t</i>) =
+                  <i>P</i><sup>(<i>k</i>*)</sup><sub><i>t</i>−<i>m</i>+1</sub> (AB-join vs ℛ)
+                </div>
+              </div>
+              <div style="font-size:17pt; font-style:italic; color:var(--slate); text-align:center;">
+                Causal, but smaller reference → more score degeneracy.
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">8</span></div>
+      </section>
+
+      <!-- SLIDE 9: EXPERIMENTAL SETUP -->
+      <section class="slide" data-num="9" data-title="Experimental Setup" data-time="1:15"
+        data-notes="Emphasise that 'label-free' rolling/ACI means zero test labels. Oracle versions are reported only as upper bounds.">
+        <div class="slide-header">
+          <div>
+            <div class="sec-tag">Section C · Method</div>
+            <h1>Experimental Setup</h1>
+          </div>
+        </div>
+        <div class="slide-body" style="gap:18px;">
+          <div
+            style="background:var(--navy); color:#fff; border-radius:10px; padding:13px 20px; font-size:18.5pt; font-weight:700; text-align:center;">
+            Train End &lt; Val Start &lt; Test Start. &nbsp; No test labels in training, calibration, or thresholding.
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:20px; flex:1;">
+            <div class="card" style="border-left:10px solid var(--teal); padding:20px 24px;">
+              <div style="font-size:21pt; font-weight:800; color:var(--navy); margin-bottom:10px;">Datasets</div>
+              <div style="font-size:18.5pt; line-height:1.38;">UNSW-NB15 (10 blocks × 8,000 = 80,000 flows);
+                CSE-CIC-IDS2018 (Thu/Fri/Wed, 60 s windows); live Flask testbed.</div>
+            </div>
+            <div class="card" style="border-left:10px solid var(--navy); padding:20px 24px;">
+              <div style="font-size:21pt; font-weight:800; color:var(--navy); margin-bottom:10px;">Detectors</div>
+              <div style="font-size:18.5pt; line-height:1.38;">Config A, Config A-prime (m ∈ {5, 10}), Isolation Forest
+                (100 trees), ARIMA(1,0,1) residual.</div>
+            </div>
+            <div class="card" style="border-left:10px solid var(--amber); padding:20px 24px;">
+              <div style="font-size:21pt; font-weight:800; color:var(--navy); margin-bottom:10px;">Calibration</div>
+              <div style="font-size:18.5pt; line-height:1.38;">Static quantile, static split-conformal, rolling
+                conformal (W = 60), ACI (γ = 0.01); α ∈ {0.005 … 0.10}.</div>
+            </div>
+            <div class="card" style="border-left:10px solid var(--green); padding:20px 24px;">
+              <div style="font-size:21pt; font-weight:800; color:var(--navy); margin-bottom:10px;">Minimum Reference
+                Rule</div>
+              <div style="font-size:18.5pt; line-height:1.38;">Enforce N ≥ 100 benign training windows to prevent
+                reference starvation and ranking reversals.</div>
+            </div>
+          </div>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">9</span></div>
+      </section>
+
+      <!-- SLIDE 10: FIVE PATHOLOGIES ROADMAP -->
+      <section class="slide" data-num="10" data-title="Five Pathologies Roadmap" data-time="1:00"
+        data-notes="Stress 'our own pipeline' so the audience sees this as self-audit, not blame on the base paper. The base paper did not evaluate on CSE-CIC-IDS2018.">
+        <div class="slide-header">
+          <div>
+            <div class="sec-tag">Section D · Methodological Audit</div>
+            <h1>Five Pathologies in Our Own Pipeline</h1>
+          </div>
+        </div>
+        <div class="slide-body" style="justify-content:center; gap:24px;">
+          <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:24px;">
+            <div class="card" style="border:2px solid var(--crimson); padding:22px;">
+              <span
+                style="display:inline-block; background:var(--crimson); color:#fff; font-weight:800; font-size:16pt; padding:4px 12px; border-radius:8px; margin-bottom:12px;">01</span>
+              <div style="font-size:21pt; font-weight:800; color:var(--navy); margin-bottom:8px;">Time-axis compression
+              </div>
+              <div style="font-size:18.5pt; font-weight:700; color:var(--crimson);">12 h squeezed into 3.1 h</div>
+            </div>
+            <div class="card" style="border:2px solid var(--crimson); padding:22px;">
+              <span
+                style="display:inline-block; background:var(--crimson); color:#fff; font-weight:800; font-size:16pt; padding:4px 12px; border-radius:8px; margin-bottom:12px;">02</span>
+              <div style="font-size:21pt; font-weight:800; color:var(--navy); margin-bottom:8px;">Training starvation
+              </div>
+              <div style="font-size:18.5pt; font-weight:700; color:var(--crimson);">IF F1 0.000 → 0.986</div>
+            </div>
+            <div class="card" style="border:2px solid var(--crimson); padding:22px;">
+              <span
+                style="display:inline-block; background:var(--crimson); color:#fff; font-weight:800; font-size:16pt; padding:4px 12px; border-radius:8px; margin-bottom:12px;">03</span>
+              <div style="font-size:21pt; font-weight:800; color:var(--navy); margin-bottom:8px;">Threshold collapse
+              </div>
+              <div style="font-size:18.5pt; font-weight:700; color:var(--crimson);">99.73% zero scores</div>
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(2, 375px); justify-content:center; gap:36px;">
+            <div class="card" style="border:2px solid var(--crimson); padding:22px;">
+              <span
+                style="display:inline-block; background:var(--crimson); color:#fff; font-weight:800; font-size:16pt; padding:4px 12px; border-radius:8px; margin-bottom:12px;">04</span>
+              <div style="font-size:21pt; font-weight:800; color:var(--navy); margin-bottom:8px;">Persistence filter
+              </div>
+              <div style="font-size:18.5pt; font-weight:700; color:var(--crimson);">Hurt F1 in 67.5% of configs</div>
+            </div>
+            <div class="card" style="border:2px solid var(--crimson); padding:22px;">
+              <span
+                style="display:inline-block; background:var(--crimson); color:#fff; font-weight:800; font-size:16pt; padding:4px 12px; border-radius:8px; margin-bottom:12px;">05</span>
+              <div style="font-size:21pt; font-weight:800; color:var(--navy); margin-bottom:8px;">Flow blocks</div>
+              <div style="font-size:18.5pt; font-weight:700; color:var(--crimson);">All MP ≤ 0.1246 (&lt; 0.1281
+                baseline)</div>
+            </div>
+          </div>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">10</span></div>
+      </section>
+
+      <!-- SLIDE 11: PATHOLOGY 1: TIME-AXIS INTEGRITY -->
+      <section class="slide" data-num="11" data-title="Pathology 1: Time-Axis Integrity" data-time="1:00"
+        data-notes="Dataset: CSE-CIC-IDS2018 Friday, DoS-Hulk. Sequential indexing of only active windows made the attack seem far more frequent than it was.">
+        <div class="slide-header">
+          <div>
+            <div class="sec-tag">Section D · Audit</div>
+            <h1>Pathology 1: Time-Axis Integrity</h1>
+          </div>
+          <div class="tracker"><span class="t-pill current">1 Time</span><span class="t-pill">2 Size</span><span
+              class="t-pill">3 Collapse</span><span class="t-pill">4 Persist</span><span class="t-pill">5 Flows</span>
+          </div>
+        </div>
+        <div class="slide-body" style="flex-direction:row; gap:26px; align-items:center;">
+          <div class="card"
+            style="flex:1.05; padding:26px; height:450px; display:flex; flex-direction:column; justify-content:center; gap:24px;">
+            <div style="font-size:19.5pt; font-weight:800; color:var(--navy);">CSE-CIC-IDS2018 Friday (DoS-Hulk)</div>
+            <div>
+              <div style="font-size:17pt; margin-bottom:8px;">True wall-clock timeline: <strong>11.97 hours</strong>
+                (719 min)</div>
+              <div
+                style="display:flex; height:58px; border-radius:6px; overflow:hidden; border:1px solid var(--border);">
+                <div style="width:20%; background:var(--teal);"></div>
+                <div
+                  style="width:62%; background:repeating-linear-gradient(45deg, #FCEEEE, #FCEEEE 10px, #F5D0D2 10px, #F5D0D2 20px); border-left:2px solid var(--crimson); border-right:2px solid var(--crimson); display:flex; align-items:center; justify-content:center; color:var(--crimson); font-weight:800; font-size:15pt;">
+                  454-min quiescent gap</div>
+                <div style="width:18%; background:var(--teal);"></div>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:17pt; font-weight:700; color:var(--crimson); margin-bottom:8px;">What our first
+                pipeline saw: 3.1 hours (191 min)</div>
+              <div style="display:flex; align-items:center; gap:14px;">
+                <div
+                  style="width:26%; height:58px; background:var(--crimson); color:#fff; border-radius:6px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:17pt;">
+                  3.1 h</div>
+                <span style="font-size:17pt; font-style:italic; color:var(--slate);">← Squeezed active windows
+                  sequentially</span>
+              </div>
+            </div>
+          </div>
+          <div style="flex:0.95; display:flex; flex-direction:column; gap:24px;">
+            <div
+              style="background:var(--crimson-tint); border:2px solid var(--crimson); border-radius:12px; padding:22px; text-align:center;">
+              <div style="font-size:44pt; font-weight:800; color:var(--crimson);">528 min skipped</div>
+              <div style="font-size:21pt; font-weight:700; color:var(--navy); margin-top:6px;">11.97 h → 3.1 h</div>
+            </div>
+            <ul class="bullets">
+              <li class="frag"><strong style="color:var(--crimson);">Inflated attack prevalence</strong> by omitting
+                quiet minutes</li>
+              <li class="frag"><strong style="color:var(--crimson);">Distorted wall-clock MTTD</strong> across skipped
+                gaps</li>
+              <li class="frag"><strong style="color:var(--green);">Fix:</strong> gapless 60 s datetime grid +
+                chronological assertions</li>
+            </ul>
+          </div>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">11</span></div>
+      </section>
+
+      <!-- SLIDE 12: PATHOLOGY 2: TRAINING SIZING FLIPS RANKINGS -->
+      <section class="slide" data-num="12" data-title="Pathology 2: Training Sizing" data-time="1:15"
+        data-notes="Be careful to say 0.9859 is under validation-F1 tuning, and 0.8780 is under fixed α = 0.05 conformal calibration. They are different protocols.">
+        <div class="slide-header">
+          <div>
+            <div class="sec-tag">Section D · Audit</div>
+            <h1>Pathology 2: Training Sizing Flips Rankings</h1>
+          </div>
+          <div class="tracker"><span class="t-pill done">1 Time</span><span class="t-pill current">2 Size</span><span
+              class="t-pill">3 Collapse</span><span class="t-pill">4 Persist</span><span class="t-pill">5 Flows</span>
+          </div>
+        </div>
+        <div class="slide-body" style="gap:14px;">
+          <div style="display:flex; gap:26px; flex:1; min-height:0;">
+            <div class="card"
+              style="flex:1.05; padding:22px; display:flex; flex-direction:column; justify-content:space-between;">
+              <div style="font-size:20pt; font-weight:800; color:var(--navy); text-align:center;">Isolation Forest F1 on
+                Wednesday</div>
+              <div
+                style="display:flex; justify-content:space-around; align-items:flex-end; height:270px; border-bottom:2px solid var(--slate); padding-bottom:0 24px;">
+                <div style="display:flex; flex-direction:column; align-items:center; width:160px;">
+                  <div style="font-size:26pt; font-weight:800; color:var(--crimson); margin-bottom:8px;">0.0000</div>
+                  <div style="width:105px; height:6px; background:var(--crimson);"></div>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:center; width:160px;">
+                  <div style="font-size:26pt; font-weight:800; color:var(--green); margin-bottom:8px;">0.9859</div>
+                  <div style="width:105px; height:215px; background:var(--green); border-radius:6px 6px 0 0;"></div>
+                </div>
+              </div>
+              <div
+                style="display:flex; justify-content:space-around; text-align:center; font-size:17.5pt; font-weight:700;">
+                <div>Within-day<br />N = 16 (Rank 5)</div>
+                <div>Cross-day<br />N = 507 (Rank 1)</div>
+              </div>
+            </div>
+            <div style="flex:0.95; display:flex; align-items:center;">
+              <ul class="bullets" style="gap:18px;">
+                <li class="frag">Within-day starves models: Wednesday <strong style="color:var(--crimson);">N = 16 → F1
+                    = 0.0000</strong></li>
+                <li class="frag">Friday within-day <strong style="color:var(--crimson);">N = 45</strong> also starved;
+                  ARIMA failed to converge</li>
+                <li class="frag">Cross-day <strong style="color:var(--green);">N = 507 → F1 = 0.9859</strong> (val-F1
+                  tuned)</li>
+                <li class="frag">Fixed α = 0.05 conformal: Wednesday IF <strong style="color:var(--teal);">F1 =
+                    0.8780</strong> (FPR 29.41%, recall 100%)</li>
+              </ul>
+            </div>
+          </div>
+          <div class="takeaway frag"><strong>Takeaway:</strong> Rankings from small-reference runs reflect starvation,
+            not algorithms. Use N ≥ 100.</div>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">12</span></div>
+      </section>
+
+      <!-- SLIDE 13: PATHOLOGY 3: THRESHOLD COLLAPSE -->
+      <section class="slide" data-num="13" data-title="Pathology 3: Threshold Collapse" data-time="1:45"
+        data-notes="Walk through the figure top to bottom, highlighting the bottom-left UNSW Flow panel: the blue spike is benign scores stuck at zero. Quantile rule + MAD floor drops FPR from 100% to 0.57%, but recall is only 2.14% — warn the audience that low FPR here is not a win.">
+        <div class="slide-header">
+          <div>
+            <div class="sec-tag">Section D · Audit</div>
+            <h1>Pathology 3: Threshold Collapse</h1>
+          </div>
+          <div class="tracker"><span class="t-pill done">1 Time</span><span class="t-pill done">2 Size</span><span
+              class="t-pill current">3 Collapse</span><span class="t-pill">4 Persist</span><span class="t-pill">5
+              Flows</span></div>
+        </div>
+        <div class="slide-body" style="gap:12px;">
+          <div style="display:flex; gap:22px; flex:1; min-height:0;">
+            <div style="flex:0.95; display:flex; flex-direction:column; justify-content:space-between;">
+              <ul class="bullets crimson" style="gap:16px;">
+                <li class="frag"><strong style="color:var(--teal);">Hypothesis refuted:</strong> "26-day gap" false;
+                  flow block sits 107 s after reference in Batch 1.</li>
+                <li class="frag"><strong style="color:var(--crimson);">Real cause:</strong> <strong>99.73% of benign val
+                    scores = 0</strong> → val-F1 picks τ* = 0 → FPR 100%.</li>
+              </ul>
+              <div class="card" style="padding:18px 20px; display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+                <div>
+                  <div style="font-size:36pt; font-weight:800; color:var(--crimson);">99.73%</div>
+                  <div style="font-size:16.5pt;">benign val scores = 0.0</div>
+                </div>
+                <div>
+                  <div style="font-size:28pt; font-weight:800; color:var(--teal);">100% → 0.57%</div>
+                  <div style="font-size:16.5pt; font-weight:700; color:var(--crimson);">FPR (recall only 2.14%)</div>
+                </div>
+              </div>
+            </div>
+            <div class="fig-card" style="flex:1.05; min-height:0; justify-content:space-between;">
+              <div
+                style="position:relative; flex:1; min-height:0; display:flex; align-items:center; justify-content:center;">
+                <img src="./assets/score_histograms_saturation_diagnosis.png" alt="Figure 1 Saturation Diagnosis"
+                  style="max-height:385px;" />
+                <div
+                  style="position:absolute; left:2%; bottom:1%; width:48%; height:20%; border:3px solid var(--crimson); border-radius:4px; pointer-events:none;">
+                </div>
+                <div
+                  style="position:absolute; left:-18px; bottom:9%; background:var(--teal); color:#fff; font-weight:800; font-size:13pt; padding:2px 8px; border-radius:6px;">
+                  0.0 spike →</div>
+              </div>
+              <div class="fig-caption">Figure 1 in paper (UNSW Flow spike at 0.0 highlighted)</div>
+            </div>
+          </div>
+          <div class="takeaway frag"><strong>Takeaway:</strong> ε-MAD floor cures FPR (100% → 0.57%) but recall is only
+            2.14% (ROC-AUC 0.5079): it hides alerts, it does not restore discrimination.</div>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">13</span></div>
+      </section>
+
+      <!-- SLIDE 14: SCORE DEGENERACY ON LIVE TESTBED -->
+      <section class="slide" data-num="14" data-title="Score Degeneracy on Live Testbed" data-time="1:15"
+        data-notes="It is not just a bug we could fix; none of the four fixes helped, so beyond the math artefact there is no discriminative subsequence signal in this HTTP telemetry.">
+        <div class="slide-header">
+          <div>
+            <div class="sec-tag">Section D · Audit</div>
+            <h1>Score Degeneracy on the Live Testbed</h1>
+          </div>
+          <div class="tracker"><span class="t-pill done">1 Time</span><span class="t-pill done">2 Size</span><span
+              class="t-pill current">3 Collapse</span><span class="t-pill">4 Persist</span><span class="t-pill">5
+              Flows</span></div>
+        </div>
+        <div class="slide-body" style="flex-direction:row; gap:28px; align-items:center;">
+          <div style="flex:0.88; display:flex; flex-direction:column; gap:20px;">
+            <div class="card" style="border:2px solid var(--crimson); padding:24px;">
+              <div style="font-size:36pt; font-weight:800; color:var(--crimson); margin-bottom:8px;">1 unique score
+                (0.0)</div>
+              <div style="font-size:26pt; font-weight:800; color:var(--navy);">ROC-AUC = 0.5000</div>
+              <div style="font-size:20pt; font-weight:700; color:var(--teal); margin-top:4px;">PR-AUC = 0.4533 (= class
+                prevalence)</div>
+              <div style="font-size:17.5pt; color:var(--charcoal); margin-top:14px;">Cause: zero-variance channels
+                (<span class="code">4xx</span>, <span class="code">5xx</span>, <span class="code">error_rate</span>)
+                collapse z-normalised distance.</div>
+            </div>
+            <ul class="bullets green">
+              <li class="frag"><strong style="color:var(--green);">Contrast:</strong> Isolation Forest &amp; ARIMA on
+                same data achieve <strong style="color:var(--green);">ROC-AUC &gt; 0.90</strong></li>
+            </ul>
+          </div>
+          <div style="flex:1.12;">
+            <div style="font-size:19.5pt; font-weight:800; color:var(--navy); margin-bottom:12px;">Diagnostic Variants
+              Tried</div>
+            <table class="clean-table">
+              <thead>
+                <tr>
+                  <th>Variant</th>
+                  <th>ROC-AUC (A / A′)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Drop 3 constant channels</td>
+                  <td class="c-crimson">0.5013 / 0.4580</td>
+                </tr>
+                <tr>
+                  <td>Smooth counts (w = 3)</td>
+                  <td class="c-crimson">0.5000 / 0.5000</td>
+                </tr>
+                <tr>
+                  <td>No z-normalisation</td>
+                  <td class="c-crimson">0.5000 / 0.5000</td>
+                </tr>
+                <tr>
+                  <td>Larger m = 20</td>
+                  <td class="c-crimson">0.5000 / 0.4557</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">14</span></div>
+      </section>
+
+      <!-- SLIDE 15: PATHOLOGY 4: PERSISTENCE FILTER -->
+      <section class="slide" data-num="15" data-title="Pathology 4: Persistence Filter" data-time="1:00"
+        data-notes="The paired design (same score stream, same threshold, parent vs variant) is what makes the result trustworthy. Say that the 2.5% 'improved' is the remainder (100 − 67.5 − 30.0); the paper states only the first two numbers.">
+        <div class="slide-header">
+          <div>
+            <div class="sec-tag">Section D · Audit (Negative Result)</div>
+            <h1>Pathology 4: Persistence Filter</h1>
+          </div>
+          <div class="tracker"><span class="t-pill done">1 Time</span><span class="t-pill done">2 Size</span><span
+              class="t-pill done">3 Collapse</span><span class="t-pill current">4 Persist</span><span class="t-pill">5
+              Flows</span></div>
+        </div>
+        <div class="slide-body" style="gap:14px;">
+          <div style="display:flex; gap:22px; flex:1; min-height:0;">
+            <div style="flex:0.95; display:flex; flex-direction:column; gap:14px; justify-content:space-between;">
+              <div class="card" style="padding:18px 20px;">
+                <div style="font-size:18pt; font-weight:800; color:var(--navy); margin-bottom:12px;">Rule: Alert only
+                  after k ≥ 2 consecutive crossings</div>
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;">
+                  <div
+                    style="flex:1; background:var(--teal); color:#fff; padding:10px; border-radius:8px; text-align:center; font-weight:700; font-size:15pt;">
+                    Score &gt; τ</div>
+                  <span style="font-weight:800; color:var(--slate);">→</span>
+                  <div
+                    style="flex:1.2; background:var(--crimson); color:#fff; padding:10px; border-radius:8px; text-align:center; font-weight:700; font-size:15pt;">
+                    k ≥ 2 consec.</div>
+                  <span style="font-weight:800; color:var(--slate);">→</span>
+                  <div
+                    style="flex:0.9; background:var(--navy); color:#fff; padding:10px; border-radius:8px; text-align:center; font-weight:700; font-size:15pt;">
+                    Alert</div>
+                </div>
+                <ul class="bullets" style="gap:6px;">
+                  <li class="frag" style="font-size:18pt;">Validation picked <strong style="color:var(--teal);">k* = 1
+                      in 80% of splits</strong></li>
+                </ul>
+              </div>
+              <div class="card" style="padding:18px 20px;">
+                <div style="font-size:17.5pt; font-weight:700; color:var(--navy); margin-bottom:10px;">80 Paired
+                  Configurations (Parent vs k ≥ 2)</div>
+                <div
+                  style="display:flex; height:50px; border-radius:8px; overflow:hidden; font-weight:800; font-size:15pt; color:#fff;">
+                  <div
+                    style="width:67.5%; background:var(--crimson); display:flex; align-items:center; justify-content:center;">
+                    Degraded 67.5%</div>
+                  <div style="width:30%; background:#8E9AA7; display:flex; align-items:center; justify-content:center;">
+                    Neutral 30.0%</div>
+                  <div style="width:2.5%; background:var(--green);"></div>
+                </div>
+                <div style="font-size:14.5pt; font-style:italic; color:var(--slate); margin-top:8px;">Remaining 2.5%*
+                  improved (*derived: 100 − 67.5 − 30.0)</div>
+              </div>
+            </div>
+            <div class="fig-card" style="flex:1.05; min-height:0;">
+              <img src="./assets/paired_persistence_effect.png" alt="Paired persistence effect"
+                style="max-height:385px;" />
+              <div class="fig-caption">Paired Test F1 vs Persistence k (stars = val-selected k*)</div>
+            </div>
+          </div>
+          <div class="takeaway frag"><strong>Takeaway:</strong> On bursty network attacks, delaying alerts costs recall.
+          </div>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">15</span></div>
+      </section>
+
+      <!-- SLIDE 16: PATHOLOGY 5: MATRIX PROFILES VS TRIVIAL BASELINE -->
+      <section class="slide" data-num="16" data-title="Pathology 5: Flow Blocks" data-time="1:00"
+        data-notes="A detector that cannot beat 'flag everything' has no operational value here.">
+        <div class="slide-header">
+          <div>
+            <div class="sec-tag">Section D · Audit</div>
+            <h1>Pathology 5: Matrix Profiles on Flows</h1>
+          </div>
+          <div class="tracker"><span class="t-pill done">1 Time</span><span class="t-pill done">2 Size</span><span
+              class="t-pill done">3 Collapse</span><span class="t-pill done">4 Persist</span><span
+              class="t-pill current">5 Flows</span></div>
+        </div>
+        <div class="slide-body" style="gap:14px;">
+          <div style="display:flex; gap:22px; flex:1; min-height:0;">
+            <div class="card"
+              style="flex:0.55; padding:22px; display:flex; flex-direction:column; justify-content:space-between;">
+              <div>
+                <div style="font-size:40pt; font-weight:800; color:var(--crimson);">≤ 0.1246</div>
+                <div style="font-size:17.5pt; font-weight:700; margin-top:4px;">Best MP mean F1<br />(below All-Attack
+                  <strong>0.1281</strong>)
+                </div>
+              </div>
+              <ul class="bullets crimson" style="gap:12px;">
+                <li class="frag" style="font-size:17.5pt;">10 blocks × 8,000 flows = 80,000 flows</li>
+                <li class="frag" style="font-size:17.5pt;">ROC-AUC <strong
+                    style="color:var(--crimson);">0.52–0.56</strong> (near chance)</li>
+                <li class="frag" style="font-size:17.5pt; font-style:italic; color:var(--navy);">Flow summaries are
+                  point-in-time transactions, not smooth motifs.</li>
+              </ul>
+            </div>
+            <div class="fig-card" style="flex:1.15; min-height:0;">
+              <img src="./assets/unsw_multiblock_flow_f1.png" alt="UNSW multiblock flow F1" style="max-height:390px;" />
+              <div class="fig-caption">UNSW-NB15 10-Block Flow F1 vs All-Attack Baseline (red dashed = 0.1281)</div>
+            </div>
+          </div>
+          <div class="takeaway frag"><strong>Takeaway:</strong> A detector that cannot beat "flag everything" has no
+            operational value here.</div>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">16</span></div>
+      </section>
+
+      <!-- SLIDE 17: CONFORMAL CALIBRATION FRAMEWORK -->
+      <section class="slide" data-num="17" data-title="Conformal Calibration Framework" data-time="1:30"
+        data-notes="Intuition: the threshold is a high percentile of 'known-normal' scores; ACI nudges that percentile up or down depending on recent false alarms.">
+        <div class="slide-header">
+          <div>
+            <div class="sec-tag">Section E · Conformal Calibration</div>
+            <h1>Conformal Calibration Framework</h1>
+          </div>
+        </div>
+        <div class="slide-body" style="justify-content:space-between; padding-bottom:10px;">
+          <div class="card"
+            style="border-left:10px solid var(--teal); padding:16px 24px; display:flex; align-items:center; gap:20px;">
+            <div style="width:210px; font-size:19.5pt; font-weight:800; color:var(--navy); flex-shrink:0;">
+              Split-Conformal<br /><span style="font-size:14pt; color:var(--teal);">(Eq. 5–6)</span></div>
+            <div style="flex:1.25;" class="math-eq"><i>q<sub>α</sub></i> =
+              &lceil;(<i>n</i>+1)(1−<i>α</i>)&rceil;/<i>n</i>, &nbsp; <i>p</i>(<i>s<sub>t</sub></i>) = (1 + &Sigma;
+              𝟙(<i>s<sub>i</sub></i> ≥ <i>s<sub>t</sub></i>))/(<i>n</i>+1)</div>
+            <div style="flex:0.85; font-size:17.5pt;">Alert if <i>p</i> ≤ <i>α</i>; high percentile of clean calibration
+              scores.</div>
+          </div>
+          <div class="card"
+            style="border-left:10px solid var(--navy); padding:16px 24px; display:flex; align-items:center; gap:20px;">
+            <div style="width:210px; font-size:19.5pt; font-weight:800; color:var(--navy); flex-shrink:0;">Adaptive
+              (ACI)<br /><span style="font-size:14pt; color:var(--navy);">(Eq. 7)</span></div>
+            <div style="flex:1.25;" class="math-eq"><i>α</i><sub><i>t</i>+1</sub> = clip(<i>α<sub>t</sub></i> +
+              <i>γ</i>(<i>α</i> − err<sub><i>t</i></sub>), <i>α</i><sub>min</sub>, <i>α</i><sub>max</sub>), &nbsp;
+              <i>γ</i>=0.01, <i>W</i>=60
+            </div>
+            <div style="flex:0.85; font-size:17.5pt;">Nudges quantile level up or down from recent alarm rate.</div>
+          </div>
+          <div class="card"
+            style="border-left:10px solid var(--green); padding:16px 24px; display:flex; align-items:center; gap:20px;">
+            <div style="width:210px; font-size:19.5pt; font-weight:800; color:var(--navy); flex-shrink:0;">Label-Free
+              Rule</div>
+            <div style="flex:1.25; font-size:18pt; font-weight:700; color:var(--green);">Only <em>unflagged</em> windows
+              (s<sub>t</sub> &lt; τ<sub>t</sub>) enter rolling buffer</div>
+            <div style="flex:0.85; font-size:17.5pt;">Flagged windows quarantined; zero test labels used.</div>
+          </div>
+          <div
+            style="background:var(--amber-tint); border:2px solid var(--amber); border-radius:10px; padding:13px 22px; font-size:18.5pt; font-weight:700; text-align:center;">
+            ⚠ Exchangeability does not strictly hold on autocorrelated telemetry → guarantee is empirical, not exact.
+          </div>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">17</span></div>
+      </section>
+
+      <!-- SLIDE 18: LABEL-LEAKAGE AUDIT -->
+      <section class="slide" data-num="18" data-title="Label-Leakage Audit" data-time="1:00"
+        data-notes="This is a good moment to underline research integrity: the headline result was retracted by the authors themselves.">
+        <div class="slide-header">
+          <div>
+            <div class="sec-tag">Section E · Conformal Calibration</div>
+            <h1>Label-Leakage Audit: We Caught Ourselves</h1>
+          </div>
+        </div>
+        <div class="slide-body" style="flex-direction:row; align-items:center; gap:22px;">
+          <div class="card"
+            style="flex:1; height:470px; background:var(--crimson-tint); border:2px solid var(--crimson); overflow:hidden; display:flex; flex-direction:column;">
+            <div style="background:var(--crimson); color:#fff; padding:12px 20px; font-size:20pt; font-weight:700;">
+              BEFORE (Stages 2–3 — Retracted)</div>
+            <div
+              style="padding:26px; flex:1; display:flex; flex-direction:column; justify-content:space-around; text-align:center;">
+              <div style="background:#fff; border:1.5px solid var(--crimson); border-radius:8px; padding:12px;"><span
+                  class="code"
+                  style="color:var(--crimson); font-weight:700; font-size:13pt; white-space:nowrap;">verified_benign_mask
+                  = (y_test == 0)</span></div>
+              <div style="font-size:40pt; font-weight:800; color:var(--crimson);">100% → 11.43%</div>
+              <div style="font-size:18.5pt; line-height:1.4;">Oracle feedback leaked test labels.<br />Label-permutation
+                test proved improvement was <strong>entirely an artefact of leakage</strong>.</div>
+            </div>
+          </div>
+          <div style="width:120px; text-align:center;">
+            <div style="font-size:14pt; font-weight:800; color:var(--navy); margin-bottom:8px;">Permutation<br />Audit
+            </div>
+            <div style="font-size:42pt; font-weight:900; color:var(--teal);">➜</div>
+          </div>
+          <div class="card"
+            style="flex:1; height:470px; background:var(--green-tint); border:2px solid var(--green); overflow:hidden; display:flex; flex-direction:column;">
+            <div style="background:var(--green); color:#fff; padding:12px 20px; font-size:20pt; font-weight:700;">AFTER
+              (Stage 4 Honest Audit)</div>
+            <div style="padding:26px; flex:1; display:flex; flex-direction:column; justify-content:space-around;">
+              <div style="font-size:38pt; font-weight:800; color:var(--green); text-align:center;">100% Label-Free</div>
+              <ul class="bullets green" style="gap:18px;">
+                <li>All primary reported results use zero test labels.</li>
+                <li>Oracle runs are explicitly marked and used only as upper bounds.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">18</span></div>
+      </section>
+
+      <!-- SLIDE 19: BENCHMARK AT ALPHA=0.05 -->
+      <section class="slide" data-num="19" data-title="Benchmark at α = 0.05 Across 32 Configs" data-time="1:45"
+        data-notes="Mention the α = 0.01 finding verbally: static split-conformal met budget in 71.9% of runs (mean FPR 1.82%) versus 53.1% for label-free rolling/ACI (mean FPR 5.70%, max 50%). Figure 2 shows static thresholds exceeding the 5% budget on Friday and Wednesday.">
+        <div class="slide-header">
+          <div>
+            <div class="sec-tag">Section E · Conformal Calibration</div>
+            <h1>Benchmark at α = 0.05 Across 32 Configs</h1>
+          </div>
+        </div>
+        <div class="slide-body" style="gap:14px;">
+          <div style="display:flex; gap:22px; flex:1; min-height:0; align-items:stretch;">
+            <div style="flex:0.86; display:flex; flex-direction:column; justify-content:center; gap:10px;">
+              <table class="clean-table">
+                <thead>
+                  <tr>
+                    <th>Method</th>
+                    <th>Mean FPR</th>
+                    <th>Target met</th>
+                    <th>Mean recall</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Static benign quantile</td>
+                    <td>0.1237</td>
+                    <td>14/32</td>
+                    <td>0.3943</td>
+                  </tr>
+                  <tr>
+                    <td>Static split-conformal</td>
+                    <td>0.1199</td>
+                    <td>14/32</td>
+                    <td>0.3890</td>
+                  </tr>
+                  <tr>
+                    <td>Rolling (label-free)</td>
+                    <td>0.1203</td>
+                    <td>18/32</td>
+                    <td>0.3362</td>
+                  </tr>
+                  <tr>
+                    <td>ACI (label-free)</td>
+                    <td class="c-teal">0.1003</td>
+                    <td>17/32</td>
+                    <td class="c-crimson">0.2606</td>
+                  </tr>
+                  <tr class="oracle">
+                    <td>Rolling (oracle)*</td>
+                    <td>0.0306</td>
+                    <td>22/32</td>
+                    <td>0.2093</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div style="font-size:14.5pt; font-style:italic; color:var(--slate);">*Oracle row needs test labels (upper
+                bound only).</div>
+            </div>
+            <div class="fig-card" style="flex:1.14; min-height:0;">
+              <div
+                style="position:relative; width:100%; height:100%; display:flex; align-items:center; justify-content:center;">
+                <img src="./assets/conformal_fpr_control_alpha05.png" alt="Figure 2 FPR Control"
+                  style="max-height:385px;" />
+                <div
+                  style="position:absolute; left:34%; top:58%; background:var(--teal); color:#fff; font-weight:800; font-size:13pt; padding:3px 9px; border-radius:6px;">
+                  α = 0.05 budget →</div>
+              </div>
+              <div class="fig-caption">Figure 2 in paper (red dashed line = nominal α = 0.05 budget)</div>
+            </div>
+          </div>
+          <div class="takeaway frag"><strong>Takeaway:</strong> Label-free adaptive methods do not reach the FPR
+            reductions that oracle feedback suggested, and recall drops.</div>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">19</span></div>
+      </section>
+
+      <!-- SLIDE 20: MATCHED-FPR COMPARISON -->
+      <section class="slide" data-num="20" data-title="Matched-FPR Comparison" data-time="1:45"
+        data-notes="Explain that matched-FPR means we compare at equal achieved false alarm rate, otherwise lower FPR can come simply from alarming less. Mention that at α = 0.01 adaptive methods had 3× higher FPR variance (10.68% vs 3.87%).">
+        <div class="slide-header">
+          <div>
+            <div class="sec-tag">Section E · Conformal Calibration</div>
+            <h1>Matched-FPR Comparison: Adaptive Costs Recall</h1>
+          </div>
+        </div>
+        <div class="slide-body" style="gap:10px;">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+            <div
+              style="background:var(--crimson-tint); border:2px solid var(--crimson); border-radius:10px; padding:12px 18px; display:flex; align-items:center; gap:16px;">
+              <div style="font-size:34pt; font-weight:800; color:var(--crimson); white-space:nowrap;">−17.91 pp</div>
+              <div style="font-size:16.5pt; font-weight:600; line-height:1.3;"><strong>Rolling LF vs matched
+                  static</strong><br />17 losses vs 6 wins · 95% CI [−0.323, −0.049]</div>
+            </div>
+            <div
+              style="background:var(--crimson-tint); border:2px solid var(--crimson); border-radius:10px; padding:12px 18px; display:flex; align-items:center; gap:16px;">
+              <div style="font-size:34pt; font-weight:800; color:var(--crimson); white-space:nowrap;">−23.91 pp</div>
+              <div style="font-size:16.5pt; font-weight:600; line-height:1.3;"><strong>ACI LF vs matched
+                  static</strong><br />18 losses vs 6 wins · 95% CI [−0.402, −0.103]</div>
+            </div>
+          </div>
+          <div style="font-size:15pt; font-style:italic; color:var(--slate); text-align:center;">
+            1,000-replicate moving-block bootstrap (block length 10). CSE cross-day only (12 runs): 0 sig. wins, mean
+            penalty &gt; −30 pp.
+          </div>
+          <div class="fig-card" style="flex:1; min-height:0; padding:8px;">
+            <img src="./assets/conformal_rolling_thresholds_friday.png" alt="Figure 3 Friday DoS-Hulk"
+              style="max-height:255px;" />
+            <div class="fig-caption">Figure 3 in paper — Friday DoS-Hulk. Under <em>oracle</em> feedback FPR fell 12.50%
+              → 1.67%; label-free stays similar to static.</div>
+          </div>
+          <div class="takeaway frag"><strong>Takeaway:</strong> Only benefit: lower day-to-day FPR variance for
+            well-separated detectors (IF: 10.79% → 4.03% std at α = 0.05).</div>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">20</span></div>
+      </section>
+
+      <!-- SLIDE 21: TESTBED ARCHITECTURE -->
+      <section class="slide" data-num="21" data-title="Testbed Architecture" data-time="1:15"
+        data-notes="Safety point: the attacker is network-confined. Features include request volume, error rate, 2xx/4xx/5xx counts, P95 latency, bytes in/out, TCP RST counts.">
+        <div class="slide-header">
+          <div>
+            <div class="sec-tag">Section F · Live Testbed Validation</div>
+            <h1>Live Testbed Architecture</h1>
+          </div>
+        </div>
+        <div class="slide-body" style="gap:20px;">
+          <div class="card"
+            style="padding:22px 26px; display:flex; flex-direction:column; align-items:center; gap:16px;">
+            <div style="display:flex; align-items:center; gap:18px; width:100%;">
+              <div
+                style="flex:1; background:var(--teal); color:#fff; border-radius:10px; padding:18px 14px; text-align:center; font-size:16.5pt; font-weight:700;">
+                Locust Load Generator<br /><span style="font-weight:400; font-size:14.5pt;">Sinusoidal diurnal + flash
+                  crowds</span></div>
+              <span style="font-size:24pt; font-weight:900; color:var(--teal);">→</span>
+              <div
+                style="flex:1.1; background:var(--navy); color:#fff; border-radius:10px; padding:18px 14px; text-align:center; font-size:16.5pt; font-weight:700;">
+                Flask REST Service<br /><span style="font-weight:400; font-size:14.5pt;">catalog, search, checkout +
+                  Prometheus</span></div>
+              <span style="font-size:24pt; font-weight:900; color:var(--teal);">→</span>
+              <div
+                style="flex:1.1; background:var(--green); color:#fff; border-radius:10px; padding:18px 14px; text-align:center; font-size:16.5pt; font-weight:700;">
+                60 s Window Aggregator<br /><span style="font-weight:400; font-size:14.5pt;">11 features → Frozen
+                  detectors</span></div>
+            </div>
+            <div style="color:var(--crimson); font-weight:900; font-size:20pt; line-height:1;">▲</div>
+            <div
+              style="background:var(--crimson-tint); border:2px solid var(--crimson); border-radius:10px; padding:10px 22px; font-size:16pt; font-weight:700; color:var(--crimson);">
+              Isolated Attacker Container &nbsp; <span class="code" style="color:var(--charcoal);">internal: true</span>
+              &nbsp; <span class="code" style="color:var(--charcoal);">127.0.0.1:8088</span>
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:18px; flex:1;">
+            <div class="card" style="border-top:8px solid var(--teal); padding:18px;">
+              <div style="font-size:17pt; font-weight:800; color:var(--navy); margin-bottom:8px; white-space:nowrap;">
+                600 Windows (10 h)</div>
+              <div style="font-size:16.5pt; line-height:1.35;">25 attacks (HTTP flood, fuzzing, stealth) + 5 benign
+                flash crowds (4–5× vol, 200 OK).</div>
+            </div>
+            <div class="card" style="border-top:8px solid var(--navy); padding:18px;">
+              <div style="font-size:18.5pt; font-weight:800; color:var(--navy); margin-bottom:8px;">Clean Splits</div>
+              <div style="font-size:16.5pt; line-height:1.35;">Train 0–199 &amp; Val 200–299 are 100% benign; Test
+                300–599.</div>
+            </div>
+            <div class="card" style="border-top:8px solid var(--green); padding:18px;">
+              <div style="font-size:18.5pt; font-weight:800; color:var(--navy); margin-bottom:8px;">5 Seeds (42–46)
+              </div>
+              <div style="font-size:16.5pt; line-height:1.35;">Shuffled campaign order, random durations, interleaved
+                flash crowds.</div>
+            </div>
+            <div class="card" style="border-top:8px solid var(--amber); padding:18px;">
+              <div style="font-size:18.5pt; font-weight:800; color:var(--navy); margin-bottom:8px;">Time-Compressed
+              </div>
+              <div style="font-size:16.5pt; line-height:1.35;">Accelerated execution: ~0.14 s per 60 s window (~84 s
+                wall-clock).</div>
+            </div>
+          </div>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">21</span></div>
+      </section>
+
+      <!-- SLIDE 22: TESTBED RESULTS -->
+      <section class="slide" data-num="22" data-title="Testbed Results: Tabular Beats MP" data-time="1:30"
+        data-notes="Note the Clopper-Pearson 95% CI for 100/100 is [0.964, 1.000]. Also mention static-threshold test FPR is ~26% on the testbed, mostly driven by flash crowds, so F1 of 0.84 is not an 'operations-ready' number.">
+        <div class="slide-header">
+          <div>
+            <div class="sec-tag">Section F · Live Testbed Validation</div>
+            <h1>Testbed Results: Tabular Beats Matrix Profile</h1>
+          </div>
+        </div>
+        <div class="slide-body" style="gap:10px;">
+          <div class="fig-card" style="height:245px; padding:8px;">
+            <div style="position:relative; height:100%; display:flex; align-items:center; justify-content:center;">
+              <img src="./assets/testbed_timeline_scores.png" alt="Figure 4 Testbed Timeline"
+                style="max-height:202px;" />
+              <div
+                style="position:absolute; left:49%; bottom:10%; width:44%; height:13%; border:2.5px solid var(--crimson); border-radius:4px;">
+              </div>
+            </div>
+            <div class="fig-caption">Figure 4 in paper — Bottom panel: mSTAMP &amp; A-prime flat at 0.0 (highlighted)
+            </div>
+          </div>
+          <table class="clean-table">
+            <thead>
+              <tr>
+                <th>Model (α = 0.05, 5 seeds)</th>
+                <th>ROC-AUC</th>
+                <th>Recall (%)</th>
+                <th>F1</th>
+                <th>Campaign recall</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="good-row">
+                <td>Isolation Forest (static)</td>
+                <td>0.942 ± 0.009</td>
+                <td>98.14 ± 0.80</td>
+                <td class="c-green">0.841 ± 0.009</td>
+                <td class="c-green">100 / 100</td>
+              </tr>
+              <tr class="good-row">
+                <td>ARIMA Residual (static)</td>
+                <td>0.906 ± 0.006</td>
+                <td>98.14 ± 0.80</td>
+                <td class="c-green">0.846 ± 0.006</td>
+                <td class="c-green">100 / 100</td>
+              </tr>
+              <tr class="bad-row">
+                <td>Config A (mSTAMP)</td>
+                <td>0.500</td>
+                <td>0.0</td>
+                <td class="c-crimson">0.000</td>
+                <td class="c-crimson">0 / 100</td>
+              </tr>
+              <tr class="bad-row">
+                <td>Config A-prime (Causal AB)</td>
+                <td>0.500</td>
+                <td>0.0</td>
+                <td class="c-crimson">0.000</td>
+                <td class="c-crimson">0 / 100</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="takeaway frag"><strong>Takeaway:</strong> Tabular detectors catch every campaign; matrix profiles
+            catch none (single designed testbed).</div>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">22</span></div>
+      </section>
+
+      <!-- SLIDE 23: THE FLASH CROWD PROBLEM -->
+      <section class="slide" data-num="23" data-title="The Flash Crowd Problem" data-time="1:45"
+        data-notes="Be precise: ACI label-free reduced flash-crowd FAR to 26.1% ± 37.3% in some seeds, but campaign recall fell to 88/100, so this is not a clean win. Augmentation needs prior knowledge of what a flash crowd looks like (limitation 3).">
+        <div class="slide-header">
+          <div>
+            <div class="sec-tag">Section F · Live Testbed Validation</div>
+            <h1>The Flash Crowd Problem</h1>
+          </div>
+        </div>
+        <div class="slide-body" style="gap:12px;">
+          <div style="display:flex; gap:22px; flex:1; min-height:0;">
+            <div class="fig-card" style="flex:1.18; min-height:0;">
+              <div style="position:relative; height:100%; display:flex; align-items:center; justify-content:center;">
+                <img src="./assets/testbed_campaign_type_recall.png" alt="Figure 5 Campaign Recall"
+                  style="max-height:375px;" />
+                <div
+                  style="position:absolute; right:2%; bottom:6%; width:20%; height:30%; border:3px solid var(--crimson); border-radius:6px;">
+                </div>
+              </div>
+              <div class="fig-caption">Figure 5 in paper (Stage 3 ACI oracle view; Flash Crowd highlighted)</div>
+            </div>
+            <div style="flex:0.82; display:flex; flex-direction:column; justify-content:space-between;">
+              <div class="card"
+                style="border:1.5px solid var(--crimson); padding:16px; display:flex; gap:14px; align-items:flex-start;">
+                <span
+                  style="background:var(--crimson); color:#fff; font-weight:800; padding:4px 11px; border-radius:8px; font-size:17pt;">1</span>
+                <div style="font-size:17.5pt; line-height:1.35;">Static thresholds flag <strong>100% ± 0.0%</strong> of
+                  flash-crowd windows.</div>
+              </div>
+              <div class="card"
+                style="border:1.5px solid var(--crimson); padding:16px; display:flex; gap:14px; align-items:flex-start;">
+                <span
+                  style="background:var(--crimson); color:#fff; font-weight:800; padding:4px 11px; border-radius:8px; font-size:17pt;">2</span>
+                <div style="font-size:17.5pt; line-height:1.35;">Label-free rolling still flags <strong>100%</strong>:
+                  flagged windows are quarantined (11.43% was oracle leakage).</div>
+              </div>
+              <div class="card"
+                style="border:1.5px solid var(--green); padding:16px; display:flex; gap:14px; align-items:flex-start;">
+                <span
+                  style="background:var(--green); color:#fff; font-weight:800; padding:4px 11px; border-radius:8px; font-size:17pt;">3</span>
+                <div style="font-size:17.5pt; font-weight:700; line-height:1.35;">Training-data augmentation:
+                  flash-crowd FAR → <span style="color:var(--green);">10.16% ± 7.78%</span>, attack recall <span
+                    style="color:var(--green);">&gt; 95.98%</span>.</div>
+              </div>
+            </div>
+          </div>
+          <div
+            style="background:var(--navy); color:#fff; border-radius:10px; padding:11px 20px; font-size:17.5pt; font-weight:700; text-align:center;">
+            Alert load: ~4.5–5.4 alerts/h benign &nbsp;·&nbsp; ~59 alerts/h attacks (98.14% recall) &nbsp;·&nbsp; 60/h
+            during flash crowds
+          </div>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">23</span></div>
+      </section>
+
+      <!-- SLIDE 24: WHY MATRIX PROFILES FAIL ON FLOW TELEMETRY -->
+      <section class="slide" data-num="24" data-title="Why Matrix Profiles Fail" data-time="1:00"
+        data-notes="Be balanced: DTW or other distance metrics and heavier hyperparameter search might help a little (limitation 5), but the point-in-time nature remains.">
+        <div class="slide-header">
+          <div>
+            <div class="sec-tag">Section G · Discussion</div>
+            <h1>Why Matrix Profiles Fail on Flow Telemetry</h1>
+          </div>
+        </div>
+        <div class="slide-body" style="flex-direction:row; gap:22px;">
+          <div class="card"
+            style="flex:1.05; border:2px solid var(--crimson); overflow:hidden; display:flex; flex-direction:column;">
+            <div
+              style="background:var(--crimson); color:#fff; padding:11px 16px; font-size:20pt; font-weight:700; text-align:center;">
+              Mathematical Artefact</div>
+            <div style="padding:24px;">
+              <ul class="bullets crimson" style="gap:22px;">
+                <li class="frag">Zero-variance channels + z-normalisation → distance collapses to 0.0</li>
+                <li class="frag">Discrete, sparse features → non-concave Kneedle curves</li>
+              </ul>
+            </div>
+          </div>
+          <div class="card"
+            style="flex:1.05; border:2px solid var(--navy); overflow:hidden; display:flex; flex-direction:column;">
+            <div
+              style="background:var(--navy); color:#fff; padding:11px 16px; font-size:20pt; font-weight:700; text-align:center;">
+              Genuine Signal Absence</div>
+            <div style="padding:24px;">
+              <ul class="bullets" style="gap:22px;">
+                <li class="frag">Flow logs are point-in-time transactions with no repeating motifs or phases</li>
+                <li class="frag">Distance concentration in high dimensions erodes contrast</li>
+              </ul>
+            </div>
+          </div>
+          <div class="card"
+            style="flex:0.82; background:var(--teal-tint); border:2px solid var(--teal); padding:22px; display:flex; flex-direction:column; justify-content:space-around; text-align:center;">
+            <div style="font-size:21pt; font-weight:800; color:var(--navy);">Where Each Wins</div>
+            <div style="background:#fff; border-radius:8px; padding:16px; font-size:17.5pt; line-height:1.35;">
+              <strong>Matrix Profiles</strong><br />Smooth continuous sensor &amp; physiological series
+            </div>
+            <div
+              style="background:var(--green-tint); border:1.5px solid var(--green); border-radius:8px; padding:16px; font-size:17.5pt; font-weight:700; color:var(--green); line-height:1.35;">
+              Tabular Detectors<br />Independent flow/HTTP windows win here</div>
+          </div>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">24</span></div>
+      </section>
+
+      <!-- SLIDE 25: SRE OPERATIONAL GUIDELINES -->
+      <section class="slide" data-num="25" data-title="SRE Operational Guidelines" data-time="1:00"
+        data-notes="These are guidelines with stated evidence limits, not universal rules.">
+        <div class="slide-header">
+          <div>
+            <div class="sec-tag">Section G · Discussion</div>
+            <h1>SRE Operational Guidelines</h1>
+          </div>
+        </div>
+        <div class="slide-body">
+          <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:26px; flex:1;">
+            <div class="card"
+              style="border-top:10px solid var(--green); padding:26px; display:flex; flex-direction:column; justify-content:space-between;">
+              <div>
+                <div style="font-size:44pt; font-weight:800; color:var(--green); margin-bottom:14px;">01</div>
+                <div style="font-size:22pt; font-weight:800; color:var(--navy); line-height:1.25;">Prefer tabular
+                  ensembles for HTTP/flow telemetry</div>
+              </div>
+              <div
+                style="background:var(--green-tint); border:1.5px solid var(--green); border-radius:8px; padding:14px; font-size:17.5pt; font-weight:700;">
+                Evidence: IF F1 0.841 vs MP 0.000 (single testbed).</div>
+            </div>
+            <div class="card"
+              style="border-top:10px solid var(--teal); padding:26px; display:flex; flex-direction:column; justify-content:space-between;">
+              <div>
+                <div style="font-size:44pt; font-weight:800; color:var(--teal); margin-bottom:14px;">02</div>
+                <div style="font-size:22pt; font-weight:800; color:var(--navy); line-height:1.25;">Use static
+                  split-conformal for tight budgets</div>
+              </div>
+              <div
+                style="background:var(--teal-tint); border:1.5px solid var(--teal); border-radius:8px; padding:14px; font-size:17.5pt; font-weight:700;">
+                Evidence: Budget met in 71.9% at α = 0.01; rolling only for permissive budgets.</div>
+            </div>
+            <div class="card"
+              style="border-top:10px solid var(--navy); padding:26px; display:flex; flex-direction:column; justify-content:space-between;">
+              <div>
+                <div style="font-size:44pt; font-weight:800; color:var(--navy); margin-bottom:14px;">03</div>
+                <div style="font-size:22pt; font-weight:800; color:var(--navy); line-height:1.25;">Enforce N ≥ 100
+                  training windows</div>
+              </div>
+              <div
+                style="background:var(--teal-tint); border:1.5px solid var(--navy); border-radius:8px; padding:14px; font-size:17.5pt; font-weight:700;">
+                Evidence: IF F1 0.000 → 0.986 with adequate reference.</div>
+            </div>
+          </div>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">25</span></div>
+      </section>
+
+      <!-- SLIDE 26: LIMITATIONS -->
+      <section class="slide" data-num="26" data-title="Limitations" data-time="0:45"
+        data-notes="Mention matrix-profile hyperparameter search was limited (m ∈ {5, 10, 20}).">
+        <div class="slide-header">
+          <div>
+            <div class="sec-tag">Section G · Discussion</div>
+            <h1>Limitations</h1>
+          </div>
+        </div>
+        <div class="slide-body" style="justify-content:center;">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:22px;">
+            <div class="card" style="padding:20px; display:flex; align-items:center; gap:16px;"><span
+                style="width:44px; height:44px; border-radius:10px; background:var(--amber-tint); border:1.5px solid var(--amber); color:var(--amber); display:flex; align-items:center; justify-content:center; font-size:20pt; flex-shrink:0;">⚠</span><span
+                style="font-size:19pt;">Single Flask service; HTTP statistics, not raw flow captures</span></div>
+            <div class="card" style="padding:20px; display:flex; align-items:center; gap:16px;"><span
+                style="width:44px; height:44px; border-radius:10px; background:var(--amber-tint); border:1.5px solid var(--amber); color:var(--amber); display:flex; align-items:center; justify-content:center; font-size:20pt; flex-shrink:0;">⚠</span><span
+                style="font-size:19pt;">Designer-controlled attacks; may not generalise to novel attacks</span></div>
+            <div class="card" style="padding:20px; display:flex; align-items:center; gap:16px;"><span
+                style="width:44px; height:44px; border-radius:10px; background:var(--amber-tint); border:1.5px solid var(--amber); color:var(--amber); display:flex; align-items:center; justify-content:center; font-size:20pt; flex-shrink:0;">⚠</span><span
+                style="font-size:19pt;">Conformal guarantees are empirical (exchangeability violated)</span></div>
+            <div class="card" style="padding:20px; display:flex; align-items:center; gap:16px;"><span
+                style="width:44px; height:44px; border-radius:10px; background:var(--amber-tint); border:1.5px solid var(--amber); color:var(--amber); display:flex; align-items:center; justify-content:center; font-size:20pt; flex-shrink:0;">⚠</span><span
+                style="font-size:19pt;">Flash-crowd fix needs prior knowledge and retraining</span></div>
+            <div class="card" style="padding:20px; display:flex; align-items:center; gap:16px;"><span
+                style="width:44px; height:44px; border-radius:10px; background:var(--amber-tint); border:1.5px solid var(--amber); color:var(--amber); display:flex; align-items:center; justify-content:center; font-size:20pt; flex-shrink:0;">⚠</span><span
+                style="font-size:19pt;">Fixed traffic generator and feature set despite 5 seeds</span></div>
+            <div class="card" style="padding:20px; display:flex; align-items:center; gap:16px;"><span
+                style="width:44px; height:44px; border-radius:10px; background:var(--amber-tint); border:1.5px solid var(--amber); color:var(--amber); display:flex; align-items:center; justify-content:center; font-size:20pt; flex-shrink:0;">⚠</span><span
+                style="font-size:19pt;">Config A-prime is causal but not better at detection</span></div>
+          </div>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">26</span></div>
+      </section>
+
+      <!-- SLIDE 27: CONCLUSIONS -->
+      <section class="slide dark" data-num="27" data-title="Conclusions" data-time="1:00"
+        data-notes="End on the message that auditing and reporting negative results is a contribution in itself.">
+        <div class="slide-header">
+          <div>
+            <h1>Conclusions</h1>
+          </div>
+        </div>
+        <div class="slide-body" style="justify-content:space-between; padding-bottom:14px;">
+          <div
+            style="background:var(--navy-mid); border:1.5px solid var(--teal); border-radius:10px; padding:18px 26px; display:flex; align-items:center; gap:24px;">
+            <span style="font-size:34pt; font-weight:800; color:var(--teal);">01</span>
+            <span style="font-size:20pt; color:#fff;">Reported results are highly sensitive to unspecified choices: time
+              axis, training size, thresholds, causality.</span>
+          </div>
+          <div
+            style="background:var(--navy-mid); border:1.5px solid var(--teal); border-radius:10px; padding:18px 26px; display:flex; align-items:center; gap:24px;">
+            <span style="font-size:34pt; font-weight:800; color:var(--teal);">02</span>
+            <span style="font-size:20pt; color:#fff;">Matrix profiles do not beat simple tabular baselines on flow/HTTP
+              telemetry.</span>
+          </div>
+          <div
+            style="background:var(--navy-mid); border:1.5px solid var(--teal); border-radius:10px; padding:18px 26px; display:flex; align-items:center; gap:24px;">
+            <span style="font-size:34pt; font-weight:800; color:var(--teal);">03</span>
+            <span style="font-size:20pt; color:#fff;">Adaptive conformal trades recall (−17.9 to −23.9 pp) for FPR
+              stability; static split-conformal wins at tight budgets.</span>
+          </div>
+          <div
+            style="background:var(--navy-mid); border:1.5px solid var(--teal); border-radius:10px; padding:18px 26px; display:flex; align-items:center; gap:24px;">
+            <span style="font-size:34pt; font-weight:800; color:var(--teal);">04</span>
+            <span style="font-size:20pt; color:#fff;">Flash crowds need training-data augmentation; our own persistence
+              filter is a negative result.</span>
+          </div>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">27</span></div>
+      </section>
+
+      <!-- SLIDE 28: THANK YOU / QUESTIONS -->
+      <section class="slide dark" data-num="28" data-title="Thank You / Questions" data-time="Q&A"
+        data-notes="Open the floor for Q&A. Press B for Backup slides B1–B4, or P for Speaker-only Anticipated Questions (B5).">
+        <div class="slide-body" style="align-items:center; justify-content:center; text-align:center; gap:18px;">
+          <div style="font-size:50pt; font-weight:800; color:#fff;">Thank You</div>
+          <div style="width:260px; height:4px; background:var(--teal);"></div>
+          <div style="font-size:24pt; font-weight:700; color:var(--teal);">Questions &amp; Discussion</div>
+          <div style="font-size:19pt; color:#fff; line-height:1.45; margin-top:6px;">
+            Aalok Kumar &nbsp;·&nbsp; Aditya Sahrawat &nbsp;·&nbsp; Amal Mohanan<br />
+            Department of Computer Science and Engineering, IIIT Dharwad
+          </div>
+
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">28</span></div>
+      </section>
+
+      <!-- BACKUP B1 -->
+      <section class="slide" data-num="B1" data-backup="1" data-title="Backup B1: Full Table 1"
+        data-notes="Full 12-row Table 1 across α = 0.05 and α = 0.01.">
+        <div class="slide-header">
+          <div>
+            <div class="sec-tag">Backup Slides</div>
+            <h1>Backup B1: Full Conformal Benchmark (Table 1)</h1>
+          </div>
+        </div>
+        <div class="slide-body">
+          <table class="clean-table" style="font-size:13.5pt;">
+            <thead>
+              <tr>
+                <th>Calibration Method</th>
+                <th>Target α</th>
+                <th>Mean FPR</th>
+                <th>Std FPR</th>
+                <th>Target Met</th>
+                <th>Mean F1</th>
+                <th>Mean Recall</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="font-size:13.5pt;">Static Benign Quantile</td>
+                <td style="font-size:13.5pt;">0.05</td>
+                <td style="font-size:13.5pt;">0.1237</td>
+                <td style="font-size:13.5pt;">0.1958</td>
+                <td style="font-size:13.5pt;">43.8% (14/32)</td>
+                <td style="font-size:13.5pt;">0.4076</td>
+                <td style="font-size:13.5pt;">0.3943</td>
+              </tr>
+              <tr>
+                <td style="font-size:13.5pt;">Static Split-Conformal</td>
+                <td style="font-size:13.5pt;">0.05</td>
+                <td style="font-size:13.5pt;">0.1199</td>
+                <td style="font-size:13.5pt;">0.1956</td>
+                <td style="font-size:13.5pt;">43.8% (14/32)</td>
+                <td style="font-size:13.5pt;">0.4053</td>
+                <td style="font-size:13.5pt;">0.3890</td>
+              </tr>
+              <tr>
+                <td style="font-size:13.5pt;">Rolling Conformal (Label-Free)</td>
+                <td style="font-size:13.5pt;">0.05</td>
+                <td style="font-size:13.5pt;">0.1203</td>
+                <td style="font-size:13.5pt;">0.1617</td>
+                <td style="font-size:13.5pt;">56.2% (18/32)</td>
+                <td style="font-size:13.5pt;">0.3181</td>
+                <td style="font-size:13.5pt;">0.3362</td>
+              </tr>
+              <tr>
+                <td style="font-size:13.5pt;">Adaptive Conformal (ACI, LF)</td>
+                <td style="font-size:13.5pt;">0.05</td>
+                <td style="font-size:13.5pt;">0.1003</td>
+                <td style="font-size:13.5pt;">0.1337</td>
+                <td style="font-size:13.5pt;">53.1% (17/32)</td>
+                <td style="font-size:13.5pt;">0.2675</td>
+                <td style="font-size:13.5pt;">0.2606</td>
+              </tr>
+              <tr class="oracle">
+                <td style="font-size:13.5pt;">Rolling Conformal (Oracle)*</td>
+                <td style="font-size:13.5pt;">0.05</td>
+                <td style="font-size:13.5pt;">0.0306</td>
+                <td style="font-size:13.5pt;">0.0300</td>
+                <td style="font-size:13.5pt;">68.8% (22/32)</td>
+                <td style="font-size:13.5pt;">0.2349</td>
+                <td style="font-size:13.5pt;">0.2093</td>
+              </tr>
+              <tr class="oracle">
+                <td style="font-size:13.5pt;">Adaptive Conformal (ACI, Oracle)*</td>
+                <td style="font-size:13.5pt;">0.05</td>
+                <td style="font-size:13.5pt;">0.0286</td>
+                <td style="font-size:13.5pt;">0.0243</td>
+                <td style="font-size:13.5pt;">71.9% (23/32)</td>
+                <td style="font-size:13.5pt;">0.2345</td>
+                <td style="font-size:13.5pt;">0.2075</td>
+              </tr>
+              <tr>
+                <td style="font-size:13.5pt;">Static Benign Quantile</td>
+                <td style="font-size:13.5pt;">0.01</td>
+                <td style="font-size:13.5pt;">0.0200</td>
+                <td style="font-size:13.5pt;">0.0391</td>
+                <td style="font-size:13.5pt;">65.6% (21/32)</td>
+                <td style="font-size:13.5pt;">0.2507</td>
+                <td style="font-size:13.5pt;">0.2278</td>
+              </tr>
+              <tr>
+                <td style="font-size:13.5pt;">Static Split-Conformal</td>
+                <td style="font-size:13.5pt;">0.01</td>
+                <td style="font-size:13.5pt;" class="c-green">0.0182</td>
+                <td style="font-size:13.5pt;">0.0387</td>
+                <td style="font-size:13.5pt;" class="c-green">71.9% (23/32)</td>
+                <td style="font-size:13.5pt;">0.2388</td>
+                <td style="font-size:13.5pt;">0.2202</td>
+              </tr>
+              <tr>
+                <td style="font-size:13.5pt;">Rolling Conformal (Label-Free)</td>
+                <td style="font-size:13.5pt;">0.01</td>
+                <td style="font-size:13.5pt;">0.0570</td>
+                <td style="font-size:13.5pt;">0.1068</td>
+                <td style="font-size:13.5pt;">53.1% (17/32)</td>
+                <td style="font-size:13.5pt;">0.2168</td>
+                <td style="font-size:13.5pt;">0.2168</td>
+              </tr>
+              <tr>
+                <td style="font-size:13.5pt;">Adaptive Conformal (ACI, LF)</td>
+                <td style="font-size:13.5pt;">0.01</td>
+                <td style="font-size:13.5pt;">0.0570</td>
+                <td style="font-size:13.5pt;">0.1068</td>
+                <td style="font-size:13.5pt;">53.1% (17/32)</td>
+                <td style="font-size:13.5pt;">0.2168</td>
+                <td style="font-size:13.5pt;">0.2168</td>
+              </tr>
+              <tr class="oracle">
+                <td style="font-size:13.5pt;">Rolling Conformal (Oracle)*</td>
+                <td style="font-size:13.5pt;">0.01</td>
+                <td style="font-size:13.5pt;">0.0106</td>
+                <td style="font-size:13.5pt;">0.0122</td>
+                <td style="font-size:13.5pt;">62.5% (20/32)</td>
+                <td style="font-size:13.5pt;">0.1478</td>
+                <td style="font-size:13.5pt;">0.1301</td>
+              </tr>
+              <tr class="oracle">
+                <td style="font-size:13.5pt;">Adaptive Conformal (ACI, Oracle)*</td>
+                <td style="font-size:13.5pt;">0.01</td>
+                <td style="font-size:13.5pt;">0.0106</td>
+                <td style="font-size:13.5pt;">0.0122</td>
+                <td style="font-size:13.5pt;">62.5% (20/32)</td>
+                <td style="font-size:13.5pt;">0.1478</td>
+                <td style="font-size:13.5pt;">0.1301</td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="font-size:12pt; font-style:italic; color:var(--slate); margin-top:6px;">*Oracle rows require
+            ground-truth test labels (upper bound only).</div>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">B1</span></div>
+      </section>
+
+      <!-- BACKUP B2 -->
+      <section class="slide" data-num="B2" data-backup="1" data-title="Backup B2: Full 5-Seed Testbed Table"
+        data-notes="Full 5-seed testbed table with Clopper-Pearson 95% binomial CIs.">
+        <div class="slide-header">
+          <div>
+            <div class="sec-tag">Backup Slides</div>
+            <h1>Backup B2: Full 5-Seed Testbed Table (Table 2)</h1>
+          </div>
+        </div>
+        <div class="slide-body">
+          <table class="clean-table b2-table">
+            <thead>
+              <tr>
+                <th>Model</th>
+                <th>Calibration</th>
+                <th>ROC-AUC</th>
+                <th>Test FPR</th>
+                <th>Flash Crowd</th>
+                <th>Attack Recall</th>
+                <th>F1 Score</th>
+                <th>Campaign [95% CI]</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Isolation Forest</td>
+                <td>Static Quantile</td>
+                <td>0.942±0.009</td>
+                <td>26.85±1.79%</td>
+                <td>100.0±0.0%</td>
+                <td>98.14±0.80%</td>
+                <td>0.841±0.009</td>
+                <td class="c-green">100/100 [0.964,1.000]</td>
+              </tr>
+              <tr>
+                <td>Isolation Forest</td>
+                <td>Static Split-Conf</td>
+                <td>0.942±0.009</td>
+                <td>25.91±1.70%</td>
+                <td>100.0±0.0%</td>
+                <td>97.99±0.79%</td>
+                <td>0.844±0.009</td>
+                <td>100/100 [0.964,1.000]</td>
+              </tr>
+              <tr>
+                <td>Isolation Forest</td>
+                <td>Rolling (LF)</td>
+                <td>0.942±0.009</td>
+                <td>26.50±2.19%</td>
+                <td>100.0±0.0%</td>
+                <td>97.99±1.27%</td>
+                <td>0.842±0.011</td>
+                <td>100/100 [0.964,1.000]</td>
+              </tr>
+              <tr>
+                <td>Isolation Forest</td>
+                <td>ACI (Label-Free)</td>
+                <td>0.942±0.009</td>
+                <td>7.89±7.73%</td>
+                <td>26.06±37.29%</td>
+                <td>74.43±14.30%</td>
+                <td>0.799±0.072</td>
+                <td>88/100 [0.800,0.936]</td>
+              </tr>
+              <tr class="oracle">
+                <td>Isolation Forest</td>
+                <td>Rolling (Oracle)*</td>
+                <td>0.942±0.009</td>
+                <td>5.28±1.23%</td>
+                <td>13.26±7.64%</td>
+                <td>75.56±9.52%</td>
+                <td>0.825±0.063</td>
+                <td>89/100 [0.812,0.944]</td>
+              </tr>
+              <tr class="oracle">
+                <td>Isolation Forest</td>
+                <td>ACI (Oracle)*</td>
+                <td>0.942±0.009</td>
+                <td>4.10±0.36%</td>
+                <td>8.42±3.58%</td>
+                <td>61.63±16.94%</td>
+                <td>0.725±0.132</td>
+                <td>76/100 [0.664,0.840]</td>
+              </tr>
+              <tr>
+                <td>ARIMA Residual</td>
+                <td>Static Quantile</td>
+                <td>0.906±0.006</td>
+                <td>25.67±0.63%</td>
+                <td>100.0±0.0%</td>
+                <td>98.14±0.80%</td>
+                <td>0.846±0.006</td>
+                <td class="c-green">100/100 [0.964,1.000]</td>
+              </tr>
+              <tr>
+                <td>ARIMA Residual</td>
+                <td>Rolling (LF)</td>
+                <td>0.906±0.006</td>
+                <td>26.73±1.77%</td>
+                <td>100.0±0.0%</td>
+                <td>98.15±1.05%</td>
+                <td>0.841±0.008</td>
+                <td>100/100 [0.964,1.000]</td>
+              </tr>
+              <tr>
+                <td>ARIMA Residual</td>
+                <td>ACI (Label-Free)</td>
+                <td>0.906±0.006</td>
+                <td>22.86±0.89%</td>
+                <td>100.0±0.0%</td>
+                <td>97.68±0.85%</td>
+                <td>0.858±0.006</td>
+                <td>100/100 [0.964,1.000]</td>
+              </tr>
+              <tr class="oracle">
+                <td>ARIMA Residual</td>
+                <td>Rolling (Oracle)*</td>
+                <td>0.906±0.006</td>
+                <td>7.15±1.42%</td>
+                <td>31.00±8.34%</td>
+                <td>53.30±11.75%</td>
+                <td>0.648±0.102</td>
+                <td>78/100 [0.686,0.857]</td>
+              </tr>
+              <tr>
+                <td>Config A (mSTAMP)</td>
+                <td>All Methods</td>
+                <td>0.500±0.000</td>
+                <td>0.00±0.00%</td>
+                <td>0.00±0.00%</td>
+                <td>0.00±0.00%</td>
+                <td class="c-crimson">0.000±0.000</td>
+                <td class="c-crimson">0/100 [0.000,0.036]</td>
+              </tr>
+              <tr>
+                <td>Config A-prime (AB)</td>
+                <td>All Methods</td>
+                <td>0.500±0.000</td>
+                <td>0.00±0.00%</td>
+                <td>0.00±0.00%</td>
+                <td>0.00±0.00%</td>
+                <td class="c-crimson">0.000±0.000</td>
+                <td class="c-crimson">0/100 [0.000,0.036]</td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="font-size:11.5pt; font-style:italic; color:var(--slate); margin-top:6px;">*Oracle rows require
+            test labels. CIs are pooled Clopper-Pearson 95% intervals across 5 seeds.</div>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">B2</span></div>
+      </section>
+
+      <!-- BACKUP B3 -->
+      <section class="slide" data-num="B3" data-backup="1" data-title="Backup B3: Sensitivity of m"
+        data-notes="Sensitivity sweep across subsequence length m.">
+        <div class="slide-header">
+          <div>
+            <div class="sec-tag">Backup Slides</div>
+            <h1>Backup B3: Sensitivity of Subsequence Length m</h1>
+          </div>
+        </div>
+        <div class="slide-body" style="flex-direction:row; gap:24px;">
+          <div class="fig-card" style="flex:1.7; min-height:0;">
+            <img src="./assets/sensitivity_m.png" alt="Sensitivity m" style="max-height:440px;" />
+            <div class="fig-caption">mSTAMP sensitivity sweep over m ∈ [5, 100] on UNSW-NB15 Flow</div>
+          </div>
+          <div class="card"
+            style="flex:0.85; padding:26px; display:flex; flex-direction:column; justify-content:center; gap:20px;">
+            <div style="font-size:21pt; font-weight:800; color:var(--navy);">Interpretation</div>
+            <ul class="bullets" style="gap:20px;">
+              <li>Shorter subsequences (m = 5–10) preserve higher F1 before window averaging dilutes brief anomalies.
+              </li>
+              <li>Increasing m ≥ 20 steadily degrades F1 toward ~0.12 while runtime stays ~8.3–8.4 s.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">B3</span></div>
+      </section>
+
+      <!-- BACKUP B4 -->
+      <section class="slide" data-num="B4" data-backup="1" data-title="Backup B4: Kneedle on Flow Data"
+        data-notes="Discrete sparse features break Kneedle concavity assumptions.">
+        <div class="slide-header">
+          <div>
+            <div class="sec-tag">Backup Slides</div>
+            <h1>Backup B4: Kneedle Behaviour on Flow Data</h1>
+          </div>
+        </div>
+        <div class="slide-body" style="flex-direction:row; gap:24px;">
+          <div class="fig-card" style="flex:1.7; min-height:0;">
+            <img src="./assets/kneedle_curve_flow.png" alt="Kneedle curve flow" style="max-height:440px;" />
+            <div class="fig-caption">Kneedle cumulative max-distance curve on UNSW-NB15 flow features</div>
+          </div>
+          <div class="card"
+            style="flex:0.85; padding:26px; display:flex; flex-direction:column; justify-content:center; gap:20px;">
+            <div style="font-size:21pt; font-weight:800; color:var(--navy);">Why Kneedle Wobbles</div>
+            <ul class="bullets crimson" style="gap:20px;">
+              <li>Discrete, sparse flow features produce non-concave, piecewise-linear curves (k = 4–9).</li>
+              <li>Curvature maximization becomes sensitive to boundary noise rather than intrinsic subspace rank.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">B4</span></div>
+      </section>
+
+      <!-- BACKUP B5 (SPEAKER ONLY — HIDDEN FROM AUDIENCE VIEW) -->
+      <section class="slide speaker-hidden" data-num="B5" data-backup="1" data-speaker="1"
+        data-title="Backup B5: Anticipated Questions (Speaker-Only)"
+        data-notes="Speaker-only Q&A cheat sheet. Hidden from audience view unless Presenter Mode (P) is enabled.">
+        <div class="slide-header">
+          <div>
+            <div class="sec-tag" style="color:var(--crimson);">Hidden from Audience View · Speaker Only</div>
+            <h1>Backup B5: Anticipated Questions</h1>
+          </div>
+        </div>
+        <div class="slide-body">
+          <table class="clean-table">
+            <thead>
+              <tr>
+                <th style="background:var(--crimson); width:33%;">Likely Question</th>
+                <th style="background:var(--crimson);">Short Evidence-Backed Answer</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="font-size:13.5pt;">Did you replicate the 99.6% accuracy?</td>
+                <td style="font-size:13.5pt; text-align:left;">Base claim concerns UNSW-NB15; under leakage-free causal
+                  evaluation MP fails to beat baselines (multi-block mean F1 ≤ 0.1246 vs All-Attack 0.1281).</td>
+              </tr>
+              <tr>
+                <td style="font-size:13.5pt;">Is the testbed realistic enough?</td>
+                <td style="font-size:13.5pt; text-align:left;">No — it is a single designed Flask service; we state this
+                  explicitly as Limitations 1 &amp; 4.</td>
+              </tr>
+              <tr>
+                <td style="font-size:13.5pt;">Why is IF's test FPR ~26% on the testbed?</td>
+                <td style="font-size:13.5pt; text-align:left;">Driven by benign flash crowds flagged at 100%;
+                  training-data augmentation drops flash-crowd FAR to 10.16% ± 7.78%.</td>
+              </tr>
+              <tr>
+                <td style="font-size:13.5pt;">Why call ACI LF 26.1% FAR 'no fix'?</td>
+                <td style="font-size:13.5pt; text-align:left;">It reduced FAR in some seeds only (std ± 37.3%) and cut
+                  campaign recall from 100/100 to 88/100.</td>
+              </tr>
+              <tr>
+                <td style="font-size:13.5pt;">Does conformal fail theoretically?</td>
+                <td style="font-size:13.5pt; text-align:left;">Theory is sound, but autocorrelated drifting scores
+                  violate exchangeability, making guarantees empirical.</td>
+              </tr>
+              <tr>
+                <td style="font-size:13.5pt;">Is Config A-prime the recommended method?</td>
+                <td style="font-size:13.5pt; text-align:left;">It removes look-ahead bias (50%/48%) but does not improve
+                  detection; its value is methodological correctness.</td>
+              </tr>
+              <tr>
+                <td style="font-size:13.5pt;">Why wasn't oracle leakage caught earlier?</td>
+                <td style="font-size:13.5pt; text-align:left;">Rolling calibrators received <span class="code">y_test ==
+                    0</span> masks in Stages 2–3; label-permutation testing exposed it.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="slide-footer"><span>mSTAMP Audit</span><span>IIIT Dharwad · Dept. of CSE</span><span
+            class="f-num">B5 (HIDDEN)</span></div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud">
+    <button id="btn-prev" title="Previous (←)">◀</button>
+    <span class="hud-counter" id="hud-counter">1 / 28</span>
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <button id="btn-next" title="Next (→ / Space)">▶</button>
+    <button id="btn-notes" title="Speaker Notes (N)">Notes</button>
+    <button id="btn-grid" title="Overview Grid (G)">Grid</button>
+    <button id="btn-backup" title="Jump to Backup (B)">Backup</button>
+    <button id="btn-presenter" title="Toggle Speaker-Only B5 (P)">Presenter</button>
+    <button id="btn-fs" title="Fullscreen (F)">⛶</button>
+  </div>
+
+  <!-- Speaker Notes Drawer -->
+  <div id="notes-drawer">
+    <h4><span>Speaker Notes</span><span id="notes-time"></span></h4>
+    <p id="notes-text"></p>
+  </div>
+
+  <!-- Overview Grid Modal -->
+  <div id="grid-modal">
+    <div class="grid-header">
+      <h2>Slide Overview (Esc / G to close)</h2>
+      <button onclick="toggleGrid()"
+        style="background:var(--teal); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-weight:700; cursor:pointer;">Close</button>
+    </div>
+    <div class="grid-cards" id="grid-cards"></div>
+  </div>
+
+  <script>
+    const allSlides = Array.from(document.querySelectorAll('.slide'));
+    const stage = document.getElementById('stage');
+    const hudCounter = document.getElementById('hud-counter');
+    const progressFill = document.getElementById('progress-fill');
+    const notesDrawer = document.getElementById('notes-drawer');
+    const notesText = document.getElementById('notes-text');
+    const notesTime = document.getElementById('notes-time');
+    const gridModal = document.getElementById('grid-modal');
+    const gridCards = document.getElementById('grid-cards');
+    const btnPresenter = document.getElementById('btn-presenter');
+    const btnNotes = document.getElementById('btn-notes');
+
+    let presenterMode = false;
+    let currentIdx = 0;
+
+    function visibleSlides() {
+      return allSlides.filter(s => presenterMode || !s.dataset.speaker);
+    }
+
+    function resizeStage() {
+      const pad = 28;
+      const scaleX = (window.innerWidth - pad) / 1280;
+      const scaleY = (window.innerHeight - pad) / 720;
+      const scale = Math.min(scaleX, scaleY);
+      stage.style.transform = `scale(${scale})`;
+    }
+    window.addEventListener('resize', resizeStage);
+    resizeStage();
+
+    function getFrags(slide) {
+      return Array.from(slide.querySelectorAll('.frag'));
+    }
+
+    function showSlide(idx, revealAllFrags = false) {
+      const slides = visibleSlides();
+      if (idx < 0) idx = 0;
+      if (idx >= slides.length) idx = slides.length - 1;
+      currentIdx = idx;
+
+      allSlides.forEach(s => s.classList.remove('active'));
+      const active = slides[currentIdx];
+      active.classList.add('active');
+
+      const frags = getFrags(active);
+      frags.forEach(f => f.classList.toggle('visible', revealAllFrags));
+
+      const label = active.dataset.num;
+      const isBackup = !!active.dataset.backup;
+      hudCounter.textContent = isBackup ? `Backup ${label}` : `${label} / 28`;
+      const pct = isBackup ? 100 : ((parseInt(label, 10) / 28) * 100);
+      progressFill.style.width = `${pct}%`;
+
+      notesText.textContent = active.dataset.notes || 'No speaker notes for this slide.';
+      notesTime.textContent = active.dataset.time ? `⏱ ${active.dataset.time}` : '';
+    }
+
+    function nextStep() {
+      const slides = visibleSlides();
+      const active = slides[currentIdx];
+      const hiddenFrag = getFrags(active).find(f => !f.classList.contains('visible'));
+      if (hiddenFrag) {
+        hiddenFrag.classList.add('visible');
+        return;
+      }
+      if (currentIdx < slides.length - 1) {
+        showSlide(currentIdx + 1, false);
+      }
+    }
+
+    function prevStep() {
+      const slides = visibleSlides();
+      const active = slides[currentIdx];
+      const visFrags = getFrags(active).filter(f => f.classList.contains('visible'));
+      if (visFrags.length > 0) {
+        visFrags[visFrags.length - 1].classList.remove('visible');
+        return;
+      }
+      if (currentIdx > 0) {
+        showSlide(currentIdx - 1, true);
+      }
+    }
+
+    function toggleNotes() {
+      notesDrawer.classList.toggle('open');
+      btnNotes.classList.toggle('active-btn', notesDrawer.classList.contains('open'));
+    }
+
+    function renderGrid() {
+      const slides = visibleSlides();
+      gridCards.innerHTML = '';
+      slides.forEach((s, i) => {
+        const div = document.createElement('div');
+        div.className = 'grid-item' +
+          (i === currentIdx ? ' current' : '') +
+          (s.dataset.backup ? ' backup' : '') +
+          (s.dataset.speaker ? ' hidden-speaker' : '');
+        div.innerHTML = `<div class="g-num">Slide ${s.dataset.num}${s.dataset.time ? ' · ' + s.dataset.time : ''}</div><div class="g-title">${s.dataset.title}</div>`;
+        div.onclick = () => { showSlide(i, true); toggleGrid(); };
+        gridCards.appendChild(div);
+      });
+    }
+
+    function toggleGrid() {
+      const willOpen = !gridModal.classList.contains('open');
+      if (willOpen) renderGrid();
+      gridModal.classList.toggle('open', willOpen);
+    }
+
+    function togglePresenter() {
+      presenterMode = !presenterMode;
+      btnPresenter.classList.toggle('active-btn', presenterMode);
+      if (!presenterMode && visibleSlides()[currentIdx] === undefined) {
+        showSlide(visibleSlides().length - 1, true);
+      }
+      if (gridModal.classList.contains('open')) renderGrid();
+    }
+
+    function jumpToBackup() {
+      const slides = visibleSlides();
+      const bIdx = slides.findIndex(s => s.dataset.num === 'B1');
+      if (bIdx >= 0) showSlide(bIdx, true);
+    }
+
+    document.getElementById('btn-prev').onclick = prevStep;
+    document.getElementById('btn-next').onclick = nextStep;
+    btnNotes.onclick = toggleNotes;
+    document.getElementById('btn-grid').onclick = toggleGrid;
+    document.getElementById('btn-backup').onclick = jumpToBackup;
+    btnPresenter.onclick = togglePresenter;
+    document.getElementById('btn-fs').onclick = () => {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => { });
+      else document.exitFullscreen();
+    };
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); nextStep(); }
+      else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prevStep(); }
+      else if (e.key === 'Home') { showSlide(0, false); }
+      else if (e.key === 'End') { showSlide(visibleSlides().length - 1, true); }
+      else if (e.key.toLowerCase() === 'n') { toggleNotes(); }
+      else if (e.key.toLowerCase() === 'g') { toggleGrid(); }
+      else if (e.key.toLowerCase() === 'b') { jumpToBackup(); }
+      else if (e.key.toLowerCase() === 'p') { togglePresenter(); }
+      else if (e.key.toLowerCase() === 'f') { document.getElementById('btn-fs').click(); }
+      else if (e.key === 'Escape' && gridModal.classList.contains('open')) { toggleGrid(); }
+    });
+
+    showSlide(0, false);
+  </script>
+</body>
+
+</html>
