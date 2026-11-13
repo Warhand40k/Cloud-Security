@@ -401,72 +401,6 @@
       color: var(--green);
     }
 
-    /* HUD Controls (outside print) */
-    #hud {
-      position: fixed;
-      bottom: 14px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 50;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(11, 31, 58, 0.90);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(15, 163, 177, 0.35);
-      border-radius: 999px;
-      padding: 6px 14px;
-      color: var(--white);
-      font-size: 13px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-      transition: opacity 0.25s ease;
-    }
-
-    #hud button {
-      background: rgba(255, 255, 255, 0.10);
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      color: var(--white);
-      padding: 5px 10px;
-      border-radius: 999px;
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: 600;
-      font-family: var(--font-main);
-    }
-
-    #hud button:hover {
-      background: var(--teal);
-      border-color: var(--teal);
-    }
-
-    #hud button.active-btn {
-      background: var(--teal);
-      border-color: var(--teal);
-    }
-
-    #hud .hud-counter {
-      font-weight: 700;
-      padding: 0 8px;
-      min-width: 72px;
-      text-align: center;
-      color: #DCE7F5;
-    }
-
-    #hud .progress-track {
-      width: 110px;
-      height: 4px;
-      background: rgba(255, 255, 255, 0.18);
-      border-radius: 4px;
-      overflow: hidden;
-    }
-
-    #hud .progress-fill {
-      height: 100%;
-      background: var(--teal);
-      width: 0%;
-      transition: width 0.2s ease;
-    }
-
     /* Speaker Notes Drawer */
     #notes-drawer {
       position: fixed;
@@ -589,7 +523,6 @@
         print-color-adjust: exact;
       }
 
-      #hud,
       #notes-drawer,
       #grid-modal {
         display: none !important;
@@ -673,8 +606,7 @@
             CLOUD SRE &amp; SECURITY · METHODOLOGICAL AUDIT
           </div>
           <h1 style="font-size:35pt; font-weight:800; line-height:1.16; color:var(--white); margin-bottom:28px;">
-            Reproduction, Causal Extension, and Methodological Audit of Multidimensional Matrix Profile for Network
-            Anomaly Detection in Cloud Environments
+            Matrix Profiles for Cloud Network Anomaly Detection: A Reproducibility and Calibration Study
           </h1>
           <div style="width:280px; height:4px; background:var(--teal); margin-bottom:28px;"></div>
           <div style="font-size:21pt; font-weight:700; color:var(--white); margin-bottom:10px;">
@@ -2562,21 +2494,6 @@
     </div>
   </div>
 
-  <!-- HUD -->
-  <div id="hud">
-    <button id="btn-prev" title="Previous (←)">◀</button>
-    <span class="hud-counter" id="hud-counter">1 / 28</span>
-    <div class="progress-track">
-      <div class="progress-fill" id="progress-fill"></div>
-    </div>
-    <button id="btn-next" title="Next (→ / Space)">▶</button>
-    <button id="btn-notes" title="Speaker Notes (N)">Notes</button>
-    <button id="btn-grid" title="Overview Grid (G)">Grid</button>
-    <button id="btn-backup" title="Jump to Backup (B)">Backup</button>
-    <button id="btn-presenter" title="Toggle Speaker-Only B5 (P)">Presenter</button>
-    <button id="btn-fs" title="Fullscreen (F)">⛶</button>
-  </div>
-
   <!-- Speaker Notes Drawer -->
   <div id="notes-drawer">
     <h4><span>Speaker Notes</span><span id="notes-time"></span></h4>
@@ -2596,15 +2513,11 @@
   <script>
     const allSlides = Array.from(document.querySelectorAll('.slide'));
     const stage = document.getElementById('stage');
-    const hudCounter = document.getElementById('hud-counter');
-    const progressFill = document.getElementById('progress-fill');
     const notesDrawer = document.getElementById('notes-drawer');
     const notesText = document.getElementById('notes-text');
     const notesTime = document.getElementById('notes-time');
     const gridModal = document.getElementById('grid-modal');
     const gridCards = document.getElementById('grid-cards');
-    const btnPresenter = document.getElementById('btn-presenter');
-    const btnNotes = document.getElementById('btn-notes');
 
     let presenterMode = false;
     let currentIdx = 0;
@@ -2640,12 +2553,6 @@
       const frags = getFrags(active);
       frags.forEach(f => f.classList.toggle('visible', revealAllFrags));
 
-      const label = active.dataset.num;
-      const isBackup = !!active.dataset.backup;
-      hudCounter.textContent = isBackup ? `Backup ${label}` : `${label} / 28`;
-      const pct = isBackup ? 100 : ((parseInt(label, 10) / 28) * 100);
-      progressFill.style.width = `${pct}%`;
-
       notesText.textContent = active.dataset.notes || 'No speaker notes for this slide.';
       notesTime.textContent = active.dataset.time ? `⏱ ${active.dataset.time}` : '';
     }
@@ -2678,7 +2585,6 @@
 
     function toggleNotes() {
       notesDrawer.classList.toggle('open');
-      btnNotes.classList.toggle('active-btn', notesDrawer.classList.contains('open'));
     }
 
     function renderGrid() {
@@ -2704,7 +2610,6 @@
 
     function togglePresenter() {
       presenterMode = !presenterMode;
-      btnPresenter.classList.toggle('active-btn', presenterMode);
       if (!presenterMode && visibleSlides()[currentIdx] === undefined) {
         showSlide(visibleSlides().length - 1, true);
       }
@@ -2717,16 +2622,10 @@
       if (bIdx >= 0) showSlide(bIdx, true);
     }
 
-    document.getElementById('btn-prev').onclick = prevStep;
-    document.getElementById('btn-next').onclick = nextStep;
-    btnNotes.onclick = toggleNotes;
-    document.getElementById('btn-grid').onclick = toggleGrid;
-    document.getElementById('btn-backup').onclick = jumpToBackup;
-    btnPresenter.onclick = togglePresenter;
-    document.getElementById('btn-fs').onclick = () => {
+    function toggleFullscreen() {
       if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => { });
       else document.exitFullscreen();
-    };
+    }
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); nextStep(); }
@@ -2737,7 +2636,7 @@
       else if (e.key.toLowerCase() === 'g') { toggleGrid(); }
       else if (e.key.toLowerCase() === 'b') { jumpToBackup(); }
       else if (e.key.toLowerCase() === 'p') { togglePresenter(); }
-      else if (e.key.toLowerCase() === 'f') { document.getElementById('btn-fs').click(); }
+      else if (e.key.toLowerCase() === 'f') { toggleFullscreen(); }
       else if (e.key === 'Escape' && gridModal.classList.contains('open')) { toggleGrid(); }
     });
 
