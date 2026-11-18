@@ -5,8 +5,9 @@ __pycache__/
 .venv/
 env/
 venv/
+.pytest_cache/
 
-# Data & Models
+# Datasets and Large Data Artifacts
 data/raw/
 data/processed/
 *.parquet
@@ -14,9 +15,22 @@ data/processed/
 *.pcap
 *.zip
 *.tar.gz
+!docs/number_trace.csv
+!results/metrics/*.csv
+!results/v2/metrics/*.csv
+!results/v3/metrics/*.csv
+!results/v3_1/metrics/*.csv
+!results/v4/metrics/*.csv
+!data/testbed/*.json
 
-# Results & outputs
-results/metrics/*
+# Hidden Course / Academic Deliverables (Hidden from Repository)
+paper/
+presentation/
+Cloud_security.pdf
+*.pdf
+Presentation_Blueprint.md
+
+# LaTeX Build Artifacts
 *.fls
 *.fdb_latexmk
 *.aux
@@ -25,19 +39,11 @@ results/metrics/*
 *.blg
 *.out
 *.synctex.gz
-!results/metrics/.gitkeep
-results/predictions/*
-!results/predictions/.gitkeep
-results/figures/*
-!results/figures/.gitkeep
-!results/v2/metrics/*.csv
-!results/v2/metrics/*.json
-!results/v2/figures/*.png
-!results/v2/predictions/*.parquet
-!docs/number_trace.csv
-!results/v4/
-!results/v4/**
 
+# Results & outputs
+results/archive/
+results/archive_v2/
+results/predictions/
 
 # Jupyter & checkpoints
 .ipynb_checkpoints/
@@ -45,4 +51,3 @@ results/figures/*
 # OS artifacts
 .DS_Store
 Thumbs.db
-
