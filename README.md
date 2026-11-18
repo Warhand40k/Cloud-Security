@@ -1,293 +1,316 @@
-# Reproduction and Extension of mSTAMP + Kneedle for Cloud Network Anomaly Detection
+# Matrix Profiles for Cloud Network Anomaly Detection: A Reproducibility and Calibration Study
 
-> Course: Cloud SRE and Security | Individual project 
-> Base paper: Al-Mazrawe & Al-Musawi (2025), *Enhancing Cloud Network Security with Innovative Time Series Analysis*, JISA. DOI: 10.5753/jisa.2025.4768
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
+[![Tests](https://img.shields.io/badge/tests-29%20passed-brightgreen.svg)]()
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
----
-## Instructor's requirements (or their exact words)
-"Students must select a relevant research article in Cloud SRE and Security implement the proposed approach; evaluate the results; and prepare a research paper based on their work."
----
-## 1. Core idea in one paragraph
-
-Reproduce the paper's pipeline (multidimensional Matrix Profile via mSTAMP, with Kneedle dimension selection) as faithfully as the published description allows. Then extend it with a calibrated alert layer (adaptive thresholds and persistence filtering) and evaluate everything under one leakage-free, time-ordered protocol on two datasets, using both classification metrics and SRE-style operational metrics.
-
-**What is a reproduction, what is ours:**
-
-| Element | Origin |
-|---|---|
-| mSTAMP + Kneedle detection pipeline | Paper (re-implemented; interpretations documented) |
-| Adaptive threshold (MAD, EVT) | Our extension |
-| Persistence filtering | Our extension |
-| ARIMA-residual baseline | Our baseline (from the time-series literature) |
-| Isolation Forest baseline | Our baseline |
-
-Never present extensions as part of the paper, and never present the paper's reported scores (99.6% accuracy / 99.8% F1 on UNSW-NB15; 98% / 99.9% on CICIoT2023) as results of this project.
+> **Authors:** Aalok Kumar, Aditya Sahrawat, Amal Mohanan  
+> **Affiliation:** Department of Computer Science and Engineering, Indian Institute of Information Technology (IIIT) Dharwad, Karnataka, India  
+> **Course:** Cloud SRE and Security  
+> **Base Paper:** Amer Al-Mazrawe and Bahaa Al-Musawi (2025), *Enhancing Cloud Network Security with Innovative Time Series Analysis*, Journal of Internet Services and Applications (JISA), DOI: [10.5753/jisa.2025.4768](https://doi.org/10.5753/jisa.2025.4768).
 
 ---
 
-## 2. Research questions
-
-- **RQ1.** Can the paper's mSTAMP + Kneedle pipeline be implemented from its published description, and what must be assumed?
-- **RQ2.** Do adaptive thresholding (rolling median/MAD, and EVT peaks-over-threshold) and persistence filtering reduce false alarms while preserving detection capability?
-- **RQ3.** What do these layers cost in detection delay, runtime, throughput and memory?
-- **RQ4.** How does the matrix-profile approach compare with an Isolation Forest and an ARIMA-residual detector under the same protocol?
-- **RQ5.** Do the findings hold on a second dataset whose attacks form contiguous episodes (needed for delay and alert-volume metrics)?
-
----
-
-## 3. Cloud framing for the paper
-
-- Threat: availability and integrity attacks on cloud-hosted services (flooding, DoS/DDoS, scanning).
-- Telemetry: network flow records, equivalent to cloud flow logs.
-- SRE relevance: alert fatigue, time to detect, false alarms per day, and cost of running the detector.
-- Dataset provenance: CSE-CIC-IDS2018 was generated on AWS infrastructure **[verify against the dataset documentation]**. UNSW-NB15 comes from a laboratory testbed; say so plainly and justify it as the paper's own benchmark.
-- Limitation to state: both are offline public datasets, not live cloud telemetry. Live cloud-native testing is future work (see Section 13).
-
----
-
-## 4. Datasets
-
-### 4.1 Dataset 1: UNSW-NB15 (reproduction dataset)
-Purpose: compare against the base paper's setup.
-
-Day-1 checks **[verify]**:
-1. Download the **original raw CSV files**, not only the commonly distributed train/test partition files, which may lack timestamp fields.
-2. Confirm timestamp columns (for example start/last time) exist, parse consistently and give a defensible chronological order.
-3. Check duplicate/invalid timestamps, missing values, and the meaning of `label` and `attack_cat`.
-4. Confirm the paper's nine features exist: `Sloss, State, Dur, Sbytes, Dbytes, Sttl, Dttl, Dloss, Service`.
-5. **Measure how attack records are distributed in time.** If attacks are interleaved with normal traffic rather than arriving as contiguous episodes, then detection delay and persistence effects are hard to interpret on this dataset. Report that finding in the paper rather than hiding it.
-6. Record class balance. The method assumes anomalies are rare; if attacks are a large fraction, say so and discuss it.
-
-### 4.2 Dataset 2: CSE-CIC-IDS2018 (operational-metrics dataset)
-Purpose: contiguous attack episodes for detection delay, persistence and alerts-per-day; cloud-origin framing.
-
-- Use **one or two days only** (one DoS/DDoS-heavy day plus benign context) to stay within time and disk limits **[verify file sizes and availability]**. Fallback: CIC-IDS2017.
-- Convert flow records into fixed time windows (primary 60 s; sensitivity at 10 s) and compute window-level features: unique source IPs, normalized unique destination IPs, packets, flows, bytes, SYN count/rate, source-IP entropy. Choose the exact set after inspecting available columns.
-- Ground truth: use the dataset's documented attack schedule and flow labels. Define window label rule (any-attack vs. majority) **on validation data**, document it, and keep it fixed.
-
-### 4.3 Fallback
-CICIoT2023 (no timestamps; index-based, as in the paper) only if both datasets above fail. Index order is not chronological time; say so if used.
-
-### 4.4 Data handling rules
-- Raw files stay unchanged in `data/raw/`; processed data goes in `data/processed/`.
-- Labels are stored separately and never enter the detector.
-- Chronological train / validation / test partitions; no shuffling.
-- Any data-dependent step (scaling, thresholds, window-size choice) is fitted on train/validation only.
-- Record row counts, feature names, missing-value handling, class distribution and split boundaries.
-- Explain precisely what each partition is for, since Matrix Profile is unsupervised: train = reference/benign history and scaling state; validation = window size, threshold and persistence selection; test = final evaluation only.
+## Table of Contents
+1. [Executive Summary](#executive-summary)
+2. [The Cloud SRE Trilemma & Base Paper Gaps](#the-cloud-sre-trilemma--base-paper-gaps)
+3. [Five Methodological Pathologies](#five-methodological-pathologies)
+4. [Causal Alignment: Config A vs. Config A-prime](#causal-alignment-config-a-vs-config-a-prime)
+5. [Key Empirical Results (from Research Paper)](#key-empirical-results-from-research-paper)
+   - [Table 1: Matrix Profile Diagnostic Variants](#table-1-roc-auc-of-diagnostic-variants-of-matrix-profile)
+   - [Table 2: Conformal Benchmark Across 32 Configurations](#table-2-conformal-threshold-benchmark-summary-across-32-configurations)
+   - [Table 3: Multi-Seed Containerized Testbed Results](#table-3-multi-seed-testbed-results-alpha--005)
+6. [Datasets & Provenance](#datasets--provenance)
+7. [Repository Layout](#repository-layout)
+8. [Reproducibility Guide](#reproducibility-guide)
+   - [1. Environment Setup](#1-environment-setup)
+   - [2. Verification & Test Suite](#2-verification--test-suite)
+   - [3. Data Preprocessing & Grid Regularization](#3-data-preprocessing--grid-regularization)
+   - [4. Running Experiments & Audits](#4-running-experiments--audits)
+   - [5. Regenerating Figures & Claim Trace](#5-regenerating-figures--claim-trace)
+9. [Citation & License](#citation--license)
 
 ---
 
-## 5. Methods
+## Executive Summary
 
-### 5.1 Original pipeline (Configuration A)
-1. Preprocess: encode categoricals, handle missing markers, normalize with train-fitted statistics.
-2. Feature subset: the paper's nine features for UNSW-NB15 (FSR/BER selection details are underspecified; use the paper's reported subset and document that choice).
-3. mSTAMP (STUMPY multidimensional routines) to compute the multidimensional matrix profile.
-4. Kneedle (`kneed`) over per-dimension maximum profile values to select the dimensional subspace.
-5. Discord score per subsequence, then conversion to binary predictions.
+Detecting anomalies in cloud network telemetry is difficult because attacks are rare, nominal workloads drift, and false alarms lead to operator alert fatigue. A recent pipeline combining multidimensional Matrix Profile (**mSTAMP**) with **Kneedle** dimension selection reported near-perfect detection fidelity ($99.6\%$ accuracy, $F_1 = 0.998$) on UNSW-NB15, but left critical operational primitives unspecified:
+- Mathematical scoring semantics and score-to-alarm conversions.
+- Calibrated decision thresholds under non-stationary traffic.
+- Causal subsequence alignment (preventing look-ahead into future telemetry).
+- Non-overlapping chronological partitioning.
 
-**Explicitly document as project decisions** (the paper does not fully specify them):
-- score-to-label conversion rule,
-- alignment of subsequence scores to per-record or per-window labels (and how overlapping subsequences are handled),
-- window length `m` and subset size selection (on validation only),
-- the exact STUMPY routine used, and how it differs from the paper's description if at all.
+This repository hosts a rigorous, leakage-free reproduction, causal extension, and root-cause audit of that pipeline on **UNSW-NB15**, **CSE-CIC-IDS2018** (AWS telemetry), and a live containerized microservice testbed. 
 
-### 5.2 Extensions
-| Config | Description | Purpose |
-|---|---|---|
-| A | Original mSTAMP + Kneedle with the base decision rule | Reference |
-| B1 | A + rolling median/MAD adaptive threshold | Robust adaptive threshold |
-| B2 | A + EVT (peaks-over-threshold) threshold calibrated to a target false-alarm rate | Principled calibration |
-| C | Best of B1/B2 (chosen on validation) + persistence filter (k consecutive anomalous observations) | Alert-volume reduction |
-
-- Thresholds are fitted on train/validation scores only; the test set is never used for tuning.
-- Persistence values k are swept on validation, with delay and recall reported for each.
-- Each stage is independently switchable and runnable.
-
-### 5.3 Baselines
-| ID | Method | Notes |
-|---|---|---|
-| IF | Isolation Forest | Same permissible features, validation-set decision threshold |
-| AR | ARIMA-residual detector | One-step forecast per feature (statsmodels), residual z-score or CUSUM, validation-set threshold |
-| Optional | A second extra baseline | Only if time remains |
+> [!IMPORTANT]
+> **Governing Numerical Baseline:** The numerical results reported in the final research paper override all earlier preliminary stage documents. All numbers below are audited against `docs/number_trace.csv` and verified against the canonical evaluation artifacts in `results/v4/`.
 
 ---
 
-## 6. Evaluation protocol
+## The Cloud SRE Trilemma & Base Paper Gaps
 
-### 6.1 Metrics
-- **Classification:** precision, recall, F1, false-positive rate, PR-AUC, confusion matrix. Accuracy is reported for comparability with the paper but never alone.
-- **SRE/operational (primarily Dataset 2):** detection delay (time from episode start to first alert), false alarms per day, total alerts before and after persistence filtering.
-- **Computational:** execution time, throughput (records or windows per second), peak memory (psutil).
-- Define the unit of evaluation explicitly (row vs. window) and use the same unit for every method.
+Modern cloud platforms balance three conflicting operational demands:
+1. **Sensitivity:** Short Mean Time to Detect (MTTD) before service degradation occurs.
+2. **Alert Budget:** Holding False Positive Rate (FPR) strictly within budget ($\alpha \le 0.05$) to avoid alert fatigue.
+3. **Non-Stationary Robustness:** Distinguishing true volumetric attacks from benign traffic shifts (diurnal seasonality, flash crowds, promotions).
 
-### 6.2 Experimental rules
-- Same data, split and evaluation rules for all methods.
-- Fix and record random seeds; record Python and package versions and hardware.
-- Save predictions, scores, configs and metrics to disk, not just plots.
-- Repeat runs where runtime or randomness varies; report spread.
-- Report negative and inconclusive results honestly.
-
-### 6.3 Analyses
-- Ablation A vs. B1 vs. B2 vs. C.
-- Sensitivity to window size `m`, to threshold parameters and to persistence k.
-- Kneedle stability (how often the selected subspace changes).
-- Error analysis: inspect false positives and false negatives; look at which attack types are missed.
-- Comparison with the paper's reported numbers is **contextual only**, because data preparation and splits differ.
+Moving the mSTAMP + Kneedle pipeline from curated static datasets to streaming telemetry exposed significant specification gaps:
+- **Look-Ahead Contamination:** Standard all-pairs distance joins compute subsequences against both past and future observations.
+- **Reference Starvation:** Within-day training partitions provided as few as $N=16$ benign windows, starving non-parametric baselines.
+- **Benign Score Degeneracy:** On flow summaries, $99.73\%$ of benign validation subsequences yielded identical zero scores, collapsing quantile and median absolute deviation (MAD) thresholds to $0.0$.
 
 ---
 
-## 7. Technology stack (I will add)
+## Five Methodological Pathologies
 
-Python, pandas, NumPy, SciPy, STUMPY, `kneed`, scikit-learn, statsmodels (ARIMA baseline and EVT fitting via SciPy's generalized Pareto), matplotlib/seaborn, psutil, Jupyter. Streamlit is optional and last.
+Our methodological audit diagnosed five root-cause pathologies:
 
-Environment (Arch Linux):
+1. **Pathology 1: Time-Axis Integrity & Compression**
+   - Evaluating CSE-CIC-IDS2018 Friday DoS-Hulk data ($11.97$ elapsed hours) revealed that raw flow captures omitted **528 quiescent 60-second minutes**, including a **454-minute quiescent gap** between morning attacks and afternoon activity.
+   - Sequential indexing compressed 12 hours into 3.1 hours, inflating attack prevalence and distorting wall-clock MTTD.
+   - *Fix:* Project raw telemetry onto a continuous, gapless 60-second datetime grid with explicit chronological partitions.
+
+2. **Pathology 2: Training Sizing & Ranking Reversals**
+   - Within-day training on Friday ($N=45$) and Wednesday ($N=16$) starved non-parametric detectors, collapsing Isolation Forest to $F_1 = 0.0000$ (Rank 5).
+   - Cross-day reference sizing ($N=507$ from Thursday morning) resolved starvation: on Wednesday, Isolation Forest reached **$F_1 = 0.9859$ (Rank 1)**.
+   - Initial detector rankings were artifacts of sample starvation, not algorithmic superiority.
+
+3. **Pathology 3: Mathematical Threshold Collapse**
+   - On UNSW flow telemetry, $99.73\%$ of benign validation anomaly scores were exactly $0.0$, collapsing $\tau^* = 0.0$ and $\text{MAD} = 0$.
+   - The detector raised $100\%$ false alarms not because of calendar drift across 26 days, but because of score point-mass degeneracy.
+
+4. **Pathology 4: Persistence Filter Negative Result**
+   - A temporal persistence filter requiring $k \ge 2$ consecutive threshold crossings degraded test $F_1$ in **$67.5\%$** of 80 paired configurations (and was neutral in $30.0\%$).
+   - On bursty network attacks, persistence acts as an unhelpful delay that lowers recall.
+
+5. **Pathology 5: Multi-Block Flow Evaluation**
+   - Across 10 contiguous blocks of 8,000 flows (80,000 flows total) on UNSW-NB15, all matrix profile configurations scored a mean $F_1 \le 0.1246$, failing to beat a naive All-Attack baseline ($F_1 = 0.1281$), with near-chance ROC-AUC between $0.52$ and $0.56$.
+   - Euclidean subsequence distance fails to capture transactional, point-in-time network flow semantics.
+
+---
+
+## Causal Alignment: Config A vs. Config A-prime
+
+- **Config A (Base Paper mSTAMP):** Performs all-pairs similarity search across the entire time series. In streaming telemetry, this introduces severe look-ahead bias: **$50\%$ of validation windows and $48\%$ of test windows** matched nearest neighbors located in the future.
+- **Config A-prime (Our Causal Streaming Variant):** Restricts the AB-join nearest-neighbor search strictly to observations up to time $t$:
+  $$S(t) = P_{t-m+1}^{(k^*)}(\text{AB-join against } \mathcal{R}, \ t \ge m-1)$$
+  This guarantees zero look-ahead bias while preserving the exact multidimensional distance profile semantics.
+
+---
+
+## Key Empirical Results (from Research Paper)
+
+### Table 1: ROC-AUC of Diagnostic Variants of Matrix Profile
+Evaluated on the live microservice testbed to isolate score degeneracy:
+
+| Variant | Config A | Config A-prime |
+| :--- | :---: | :---: |
+| Drop 3 constant channels (`status_4xx`, `status_5xx`, `error_rate`) | 0.5013 | 0.4580 |
+| Smooth count features ($w = 3$) | 0.5000 | 0.5000 |
+| Non-$z$-normalized distance | 0.5000 | 0.5000 |
+| Longer subsequence ($m = 20$) | 0.5000 | 0.4557 |
+
+*Finding: Beyond mathematical degeneracy from zero-variance channels, HTTP request telemetry lacks discriminative temporal subsequence motifs for Euclidean distance joins. Standard tabular baselines on the same data reach ROC-AUC $> 0.90$.*
+
+---
+
+### Table 2: Conformal Threshold Benchmark Summary Across 32 Configurations
+Comparison of static split-conformal, label-free autonomous adaptive calibration, and oracle feedback upper bounds:
+
+| Calibration Method | Target $\alpha$ | Mean FPR | Std FPR | Target Met ($\text{FPR} \le \alpha$) | Mean $F_1$ | Mean Recall | Mean Precision |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Static Benign Quantile** | 0.05 | 0.1237 | 0.1958 | 43.8% (14/32) | **0.4076** | **0.3943** | 0.6136 |
+| **Static Split-Conformal** | 0.05 | 0.1199 | 0.1956 | 43.8% (14/32) | 0.4053 | 0.3890 | 0.6155 |
+| **Rolling Conformal (LF, $W=60$)** | 0.05 | 0.1203 | 0.1617 | 56.2% (18/32) | 0.3181 | 0.3362 | --- |
+| **Adaptive ACI (LF, $\gamma=0.01$)** | 0.05 | 0.1003 | 0.1337 | 53.1% (17/32) | 0.2675 | 0.2606 | --- |
+| *Rolling Conformal (Oracle)\** | *0.05* | *0.0306* | *0.0300* | *68.8% (22/32)* | *0.2349* | *0.2093* | *0.4171* |
+| *Adaptive ACI (Oracle)\** | *0.05* | *0.0286* | *0.0243* | *71.9% (23/32)* | *0.2345* | *0.2075* | *0.4138* |
+| **Static Benign Quantile** | 0.01 | 0.0200 | 0.0391 | 65.6% (21/32) | 0.2507 | 0.2280 | 0.5348 |
+| **Static Split-Conformal** | 0.01 | **0.0182** | **0.0387** | **71.9% (23/32)** | 0.2388 | 0.2280 | 0.5354 |
+| **Rolling Conformal (LF, $W=60$)** | 0.01 | 0.0570 | 0.1068 | 53.1% (17/32) | 0.1478 | --- | 0.3404 |
+| **Adaptive ACI (LF, $\gamma=0.01$)** | 0.01 | 0.0570 | 0.1068 | 53.1% (17/32) | 0.1478 | --- | 0.3404 |
+| *Rolling Conformal (Oracle)\** | *0.01* | *0.0106* | *0.0122* | *62.5% (20/32)* | *0.1478* | *---* | *0.3404* |
+| *Adaptive ACI (Oracle)\** | *0.01* | *0.0106* | *0.0122* | *62.5% (20/32)* | *0.1478* | *---* | *0.3404* |
+
+*\*Oracle rows denote leaked ground-truth label feedback (`verified_benign_mask = y_test == 0`) shown for reference.*
+
+---
+
+### Table 3: Multi-Seed Testbed Results ($\alpha = 0.05$)
+Evaluated across 5 randomized seeds ($42, 43, 44, 45, 46$), each with 25 attack campaigns and 5 benign flash crowds:
+
+| Model | Calibration | ROC-AUC | Test FPR (%) | Flash Crowd FAR (%) | Recall (%) | $F_1$ | Campaign Recall | 95% Clopper-Pearson CI |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Isolation Forest** | Static Quantile | $0.942 \pm 0.009$ | $26.85 \pm 1.79$ | $100.0 \pm 0.0$ | $98.14 \pm 0.80$ | $0.841 \pm 0.009$ | **100/100** | [0.964, 1.000] |
+| | Static Split-Conf | $0.942 \pm 0.009$ | $25.91 \pm 1.70$ | $100.0 \pm 0.0$ | $97.99 \pm 0.79$ | **0.844 $\pm$ 0.009** | **100/100** | [0.964, 1.000] |
+| | Rolling LF | $0.942 \pm 0.009$ | $26.50 \pm 2.19$ | $100.0 \pm 0.0$ | $97.99 \pm 1.27$ | $0.842 \pm 0.011$ | **100/100** | [0.964, 1.000] |
+| | ACI LF | $0.942 \pm 0.009$ | $7.89 \pm 7.73$ | $26.1 \pm 37.3$ | $74.43 \pm 14.30$ | $0.799 \pm 0.072$ | 88/100 | [0.800, 0.936] |
+| | *Rolling (Oracle)\** | $0.942 \pm 0.009$ | $5.28 \pm 1.23$ | $13.3 \pm 7.6$ | $75.56 \pm 9.52$ | $0.825 \pm 0.063$ | 89/100 | [0.812, 0.944] |
+| **ARIMA Residual** | Static Quantile | $0.906 \pm 0.006$ | $25.67 \pm 0.63$ | $100.0 \pm 0.0$ | $98.14 \pm 0.80$ | $0.846 \pm 0.006$ | **100/100** | [0.964, 1.000] |
+| | Rolling LF | $0.906 \pm 0.006$ | $26.73 \pm 1.77$ | $100.0 \pm 0.0$ | $98.15 \pm 1.05$ | $0.841 \pm 0.008$ | **100/100** | [0.964, 1.000] |
+| | ACI LF | $0.906 \pm 0.006$ | $22.86 \pm 0.89$ | $100.0 \pm 0.0$ | $97.68 \pm 0.85$ | **0.858 $\pm$ 0.006** | **100/100** | [0.964, 1.000] |
+| **Config A (mSTAMP)** | All Methods | $0.500 \pm 0.000$ | $24.8 \pm 0.0$ | $82.0 \pm 0.8$ | $35.60 \pm 0.70$ | 0.356 | 65/100 | [0.398, 0.492] |
+| **Config A-prime** | All Methods | $0.500 \pm 0.000$ | $21.6 \pm 0.0$ | $76.0 \pm 0.0$ | $40.12 \pm 0.60$ | 0.445 | 75/100 | [0.421, 0.516] |
+
+*Key Testbed Finding: Static and autonomous adaptive calibration flag 100% of benign flash crowd windows because volume spikes are out-of-distribution. Training data augmentation with benign flash crowd examples slashes flash crowd false alarms to **$10.16\% \pm 7.78\%$** while preserving attack recall above **$95.98\%$**.*
+
+---
+
+## Datasets & Provenance
+
+The evaluation relies on two public intrusion detection benchmarks and one live microservice testbed:
+
+| Dataset | Telemetry Type | Primary Files / Partitions | Direct Source Links |
+| :--- | :--- | :--- | :--- |
+| **UNSW-NB15** | Flow records & 10s windows | 10 contiguous blocks of 8,000 flows from Batch 1 (`UNSW-NB15_1.csv`) | [ADFA Official](https://research.unsw.edu.au/projects/unsw-nb15-dataset) · [Kaggle Dataset](https://www.kaggle.com/datasets/mrwellsdavid/unsw-nb15) |
+| **CSE-CIC-IDS2018** | AWS network telemetry | Friday-16-02-2018 (DoS-Hulk), Thursday-15-02-2018 (DoS-GoldenEye), Wednesday-21-02-2018 (DDoS-HOIC) | [UNB Dataset Hub](https://www.unb.ca/cic/datasets/ids-2018.html) · [AWS Open Data](https://registry.opendata.aws/cse-cic-ids2018/) |
+| **Live Testbed** | HTTP request metrics & Prometheus | 10-hour telemetry timeline (600 regular 60s windows), 5 randomized seeds | Containerized in `testbed/` |
+
+### Automated Dataset Download
+Use the included utility `scripts/download_datasets.py` to check local availability or download datasets:
 ```bash
-mkdir cloud-sentinel && cd cloud-sentinel
-python -m venv .venv && source .venv/bin/activate
-python -m pip install --upgrade pip
-pip install numpy pandas pyarrow scipy statsmodels scikit-learn
-pip install stumpy kneed matplotlib seaborn psutil jupyter
-pip freeze > requirements.txt
+# Verify which datasets are present locally in data/raw/
+python scripts/download_datasets.py --verify-only
+
+# Print direct download links and CLI instructions
+python scripts/download_datasets.py --instructions
+
+# Download via automated fetchers (Kaggle CLI / AWS S3)
+python scripts/download_datasets.py --dataset all
 ```
-Check the STUMPY documentation for the exact multidimensional routine before describing it as equivalent to the paper's mSTAMP.
 
 ---
 
-## 8. Schedule (ignore but keep the track in mind)
-
-### Week 1: Understand, prepare, reproduce
-| Days | Work | Output |
-|---|---|---|
-| 1-2 | Read the paper's methodology; understand MP, mSTAMP, Kneedle; download UNSW-NB15 raw files; run Section 4.1 checks; set up environment | Dataset inspection report |
-| 3-4 | Preprocessing and chronological partitions for UNSW-NB15; download one or two days of CSE-CIC-IDS2018 and inspect schema | Processed Parquet files, split record |
-| 5-7 | Implement Configuration A; document score-to-label and alignment decisions; first plots on a small sample | Working prototype |
-
-**Exit criteria:** an executable original pipeline on a small sample, producing scores and aligned predictions.
-
-### Week 2: Extend and evaluate
-| Days | Work | Output |
-|---|---|---|
-| 8-9 | Window features for Dataset 2; MAD threshold (B1); EVT threshold (B2) | Threshold modules, validation comparison |
-| 10-11 | Persistence filter (C); sweep k on validation; delay measurement | Delay vs. false-alarm trade-off |
-| 12-14 | Isolation Forest and ARIMA baselines; run A/B1/B2/C and baselines on both datasets; runtime and memory measurement | Result tables, saved predictions |
-
-**Exit criteria:** reproducible comparison on held-out data for both datasets, with classification, operational and computational metrics.
-
-### Week 3: Analyse and write
-| Days | Work |
-|---|---|
-| 15-16 | Error analysis, sensitivity analyses, final figures and tables, limitations |
-| 17-18 | Write the paper (Section 11); start writing earlier in drafts during Weeks 1-2 |
-| 19-21 | Clean code and README, verify the experiments rerun from scratch, prepare slides, rehearse explaining the algorithm and design choices |
-
-**Compressed 14-day option:** drop Dataset 2 aside from one day of data, drop B2 (EVT) or the ARIMA baseline (keep one), skip sensitivity sweeps beyond window size and persistence.
-
----
-
-## 9. Priority order (cut line)
-
-1. **Must have:** Dataset 1 pipeline, Configuration A, Config B1 and C, Isolation Forest baseline, evaluation harness, paper.
-2. **Should have:** Dataset 2 with SRE metrics, B2 (EVT), ARIMA-residual baseline.
-3. **Nice to have:** extra sensitivity analyses, live testbed demo, dashboard.
-
-Drop from the bottom up when time runs short. Never drop the leakage controls or the written limitations.
-
----
-
-## 10. Repository structure
+## Repository Layout
 
 ```text
-project/
-  data/
-    raw/                  # unchanged downloads (git-ignored)
-    processed/            # parquet tables, split manifests
-  notebooks/
-    01_dataset_analysis.ipynb
-    02_experimental_analysis.ipynb
-  src/
-    preprocessing.py
-    windowing.py          # window/feature extraction for flow data
-    feature_selection.py
-    matrix_profile.py
-    kneedle.py
-    anomaly_scoring.py
-    adaptive_threshold.py # MAD and EVT variants
-    persistence_filter.py
-    evaluation.py         # metrics, delay, alerts/day, resource usage
-    baselines.py          # Isolation Forest, ARIMA residual
-  experiments/
-    run_original.py
-    run_extended.py
-    run_baselines.py
-    compare_results.py
-  results/
-    metrics/
-    predictions/
-    figures/
-  docs/
-  requirements.txt
-  README.md
+├── configs/                     # Experiment configurations (cross-day, within-day, unsw, testbed)
+├── data/                        # Local data directory (raw & processed datasets gitignored)
+│   ├── processed/               # Continuous regularized 60s/10s parquet files
+│   ├── raw/                     # Raw CSV benchmark downloads
+│   └── testbed/                 # Testbed schedules and multi-seed collected telemetry
+├── docs/                        # Formal audit reports and claim trace
+│   ├── config_definitions.md    # Configuration registry
+│   ├── conformal_definitions.md # Formal split-conformal equations
+│   ├── findings_v4.md           # Stage 4 audit, verification, and discrepancy report
+│   └── number_trace.csv         # Reconciled trace for all 111 claims in the paper
+├── experiments/                 # Standalone, runnable experiment pipelines
+│   ├── run_stage4_step1_verification.py       # Conformal benchmark verification
+│   ├── run_stage4_step2_mp_diagnostics.py     # Matrix Profile degeneracy audit
+│   ├── run_stage4_step3_matched_conformal.py  # Matched-FPR bootstrap evaluation
+│   └── run_stage4_step4_testbed_verification.py # 5-seed testbed verification
+├── results/                     # Experimental outputs and verified metrics
+│   ├── figures/                 # High-res publication plots
+│   ├── metrics/                 # CSV and JSON tabular metrics
+│   ├── v3_1/                    # Cross-day reference sizing & saturation audit
+│   └── v4/                      # Canonical Stage 4 verified outputs (Tables 1-3)
+├── scripts/                     # Preprocessing, verification, and figure scripts
+│   ├── download_datasets.py     # Automated dataset fetcher
+│   ├── generate_number_trace.py # Re-computes docs/number_trace.csv
+│   └── generate_publication_figures_high_res.py # Generates paper figures
+├── src/                         # Core modular library
+│   ├── adaptive_threshold.py    # Conformal anomaly calibrators (Split, Rolling, ACI)
+│   ├── anomaly_scoring.py       # Distance profile to discord score converters
+│   ├── baselines.py             # Isolation Forest & ARIMA(1,0,1) residual baselines
+│   ├── causal_ab_scorer.py      # Non-look-ahead streaming mSTAMP AB-join
+│   ├── evaluation.py            # Classification & SRE operational metrics
+│   ├── kneedle.py               # Kneedle subspace dimension selection
+│   ├── matrix_profile.py        # Multidimensional Matrix Profile routines
+│   ├── persistence_filter.py    # Temporal persistence filter
+│   ├── preprocessing.py         # Leakage-free feature scaling and encoding
+│   └── windowing.py             # Continuous datetime grid aggregation
+├── testbed/                     # Dockerized microservice testbed
+│   ├── app.py                   # Flask target instrumented with Prometheus
+│   ├── attacker.py              # Confined attacker container generating 25 campaigns
+│   ├── campaign_schedule.py     # Randomized multi-seed schedule generator
+│   ├── docker-compose.yml       # Isolated bridge network testbed configuration
+│   ├── locustfile.py            # Diurnal sinusoidal benign transaction generator
+│   └── run_testbed.py           # Multi-seed testbed orchestration script
+└── tests/                       # Complete pytest unit & regression test suite (29 tests)
 ```
 
 ---
 
-## 11. Paper outline
+## Reproducibility Guide
 
-1. Abstract
-2. Introduction: cloud network security, anomaly detection, SRE relevance, contributions
-3. Related work: base paper, matrix-profile and network anomaly-detection literature, time-series approaches (ARIMA/forecast residual, exponential smoothing), the Landauer et al. review as a map of the field
-4. Background: Matrix Profile, mSTAMP, Kneedle
-5. Original methodology: faithful account plus our interpretations of underspecified steps
-6. Proposed extension: adaptive thresholds (MAD, EVT) and persistence filtering
-7. Experimental setup: datasets, preprocessing, partitions, baselines, parameters, hardware, metrics
-8. Results: A vs. B1/B2/C, baselines, both datasets, operational and computational metrics
-9. Discussion: what helped, trade-offs (delay vs. false alarms), where methods fail
-10. Threats to validity and limitations: dataset realism, interleaved attacks, label alignment, parameter selection, offline evaluation
-11. Conclusion and future work: live cloud-native telemetry evaluation
-12. References
+### 1. Environment Setup
+The codebase requires Python 3.12. Install dependencies within a virtual environment:
 
-**Contributions to state:**
-1. A documented, leakage-free reproduction of mSTAMP + Kneedle with identified ambiguities.
-2. Calibrated alert layers (MAD, EVT thresholds and persistence filtering) with measured trade-offs.
-3. An SRE-oriented evaluation (alerts per day, detection delay, resource cost) on two datasets.
-4. Comparison against Isolation Forest and ARIMA-residual baselines.
+```bash
+# Clone the repository
+git clone https://github.com/Warhand40k/Cloud-Security.git
+cd Cloud-Security
+
+# Create and activate virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install dependencies
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+### 2. Verification & Test Suite
+Run the 29 regression unit tests to verify no-label-leakage, time-axis integrity, campaign accounting consistency, causal AB scoring, and conformal prediction guarantees:
+
+```bash
+pytest tests/ -v
+```
+
+### 3. Data Preprocessing & Grid Regularization
+If raw datasets are downloaded into `data/raw/`, run grid regularization to generate continuous gapless 60s windows for CSE-CIC-IDS2018:
+
+```bash
+python scripts/generate_v3_1_regular_windows.py
+```
+
+### 4. Running Experiments & Audits
+
+#### Replicate Table 2 (Conformal Benchmark Across 32 Configurations):
+```bash
+python experiments/run_stage4_step1_verification.py
+```
+Outputs saved to `results/v4/metrics/stage4_conformal_comparison_results.csv` and `stage4_conformal_summary_by_method.csv`.
+
+#### Replicate Table 1 (Matrix Profile Diagnostic Variants):
+```bash
+python experiments/run_stage4_step2_mp_diagnostics.py
+```
+Outputs saved to `results/v4/metrics/matrix_profile_diagnostic_variants.csv` and `matrix_profile_score_degeneracy.csv`.
+
+#### Replicate Matched-FPR Comparison with Bootstrap Intervals:
+```bash
+python experiments/run_stage4_step3_matched_conformal.py
+```
+Outputs saved to `results/v4/metrics/matched_operating_points_comparison.csv`.
+
+#### Replicate Table 3 (5-Seed Live Testbed Multi-Seed Verification):
+```bash
+python experiments/run_stage4_step4_testbed_verification.py
+```
+Outputs saved to `results/v4/metrics/testbed_multiseed_summary.csv` and `testbed_multiseed_evaluation.csv`.
+
+### 5. Regenerating Figures & Claim Trace
+Re-generate all high-resolution figures:
+```bash
+python scripts/generate_publication_figures_high_res.py
+```
+Re-verify all 111 claims against backing artifacts:
+```bash
+python scripts/generate_number_trace.py
+```
 
 ---
 
-## 12. Risks and mitigations
+## Citation & License
 
-| Risk | Response |
-|---|---|
-| UNSW-NB15 raw files lack usable timestamps | Verify schema early; use another ordering only if justified and documented; or move Dataset 1 duties to CIC-IDS2018/2017 |
-| Attacks interleaved in UNSW-NB15 (delay metric ill-defined) | Report delay and alerts-per-day on Dataset 2 only; discuss the issue in limitations |
-| Dataset too large for 16 GB RAM | Subsample by day, process in chunks, profile memory early |
-| Kneedle selection unstable | Test sensitivity; report how often selection changes |
-| Paper details cannot be inferred | Record each interpretation as a project decision; do not claim exact reproduction |
-| Window-to-label alignment unclear | Fix one rule on validation data; use the same unit for every method |
-| Adaptive threshold raises missed attacks | Report the trade-off; tune on validation only |
-| Persistence filter delays alerts or hides short attacks | Measure delay; sweep several k |
-| Time overruns | Follow the cut line in Section 9 |
+This repository is distributed under the [MIT License](LICENSE).
 
----
-
-## 13. Future work (not in scope unless time remains)
-
-- **Live cloud-native demo:** a local `kind` Kubernetes cluster running a microservice demo app, benign load generation, an isolated attacker container on the same local network only, and flow-style capture fed to the detector with an automated block rule. This would be the strongest evidence of cloud relevance; treat it as an optional single-scenario demo after the core evaluation is complete.
-- Streaming (online) implementation of the matrix profile.
-- Additional datasets and attack types.
-
-### Safety note
-Any attack traffic must stay between your own containers on an isolated local network. Never target external systems or anything you do not own.
-
----
-
-## 14. Working principles
-
-- Understand the algorithm before implementing it; reproduce before extending.
-- Keep original and extended configurations independently executable.
-- Never fabricate or assume results; report negative results.
-- Do not tune on the test set; keep labels out of the detector.
-- Distinguish what the paper states, what we assumed, and what we contribute.
-- Prefer a smaller, rigorous experiment over a larger unreliable one.
+```bibtex
+@article{kumar2026matrix,
+  author    = {Kumar, Aalok and Sahrawat, Aditya and Mohanan, Amal},
+  title     = {Matrix Profiles for Cloud Network Anomaly Detection: A Reproducibility and Calibration Study},
+  journal   = {Department of Computer Science and Engineering, IIIT Dharwad},
+  year      = {2026}
+}
+```
